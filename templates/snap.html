@@ -1,0 +1,12 @@
+<!--
+this will snap a picture, store it in the PI and show a list of files
+that can be downloaded -->
+<script type=text/javascript>
+  $(function() { $("#snap").click(function (event) { $.getJSON('/takeSnapshot', { },function(data) { }); return false; }); });
+</script>
+
+<div>
+<input type="submit" id="snap" value="snap">
+<BR>
+{{browser | safe}}
+</div>

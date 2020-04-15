@@ -1,0 +1,174 @@
+		<style>
+*
+{
+	box-sizing: border-box;
+}
+body
+{
+	margin: 0px;
+	padding: 0px;
+	font-family: monospace;
+}
+.row
+{
+	display: inline-flex;
+	clear: both;
+}
+.columnLateral
+{
+  float: left;
+  width: 15%;
+  min-width: 300px;
+}
+.columnCetral
+{
+  float: left;
+  width: 70%;
+  min-width: 300px;
+}
+#joy2Div
+{
+	width:200px;
+	height:200px;
+	margin:50px
+}
+#joystick
+{
+	border: 1px solid #FF0000;
+}
+#joystick2
+{
+	border: 1px solid #0000FF;
+}
+		</style>
+
+		<script src="{{ url_for('static', filename='JoyStick/joy.js') }}"></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"> </script>
+
+		<div class="row">
+			<div class="columnLateral">
+				<div id="joy1Div" style="width:200px;height:200px;margin:50px"></div>
+				Posizione X:<input id="joy1PosizioneX" type="text" /><br />
+				Posizione Y:<input id="joy1PosizioneY" type="text" /><br />
+				Direzione:<input id="joy1Direzione" type="text" /><br />
+				X :<input id="joy1X" type="text" /></br>
+				Y :<input id="joy1Y" type="text" />
+			</div>
+			<div class="columnCetral">
+				<div>
+		      <object type="text/html" data="http://192.168.1.109:8085/stream_simple.html"
+		         width="640px" height="480px" style="overflow:auto;">
+		      </object>
+		    </div>
+			</div>
+			<div class="columnLateral">
+				<div id="joy2Div"></div>
+				Posizione X:<input id="joy2PosizioneX" type="text" /></br>
+				Posizione Y:<input id="joy2PosizioneY" type="text" /></br>
+				Direzione:<input id="joy2Direzione" type="text" /></br>
+				X :<input id="joy2X" type="text" /></br>
+				Y :<input id="joy2Y" type="text" />
+			</div>
+		</div>
+		<script type="text/javascript">
+// Create JoyStick object into the DIV 'joy1Div'
+var joyparams1 = { "title": "vertical", "vertical" : true,
+          "upCallback":function () {
+						                         $.getJSON('/moveForward', { }, function(data) { });
+					                         },
+					 "downCallback":function () {
+ 						                         $.getJSON('/moveBackward', { }, function(data) { });
+ 					                         },
+					 "neutralCallback":function () {
+ 						                         $.getJSON('/neutral', { }, function(data) { });
+ 					                         },
+				};
+var Joy1 = new JoyStick('joy1Div', joyparams1);
+
+var joy1IinputPosX = document.getElementById("joy1PosizioneX");
+var joy1InputPosY = document.getElementById("joy1PosizioneY");
+var joy1Direzione = document.getElementById("joy1Direzione");
+var joy1X = document.getElementById("joy1X");
+var joy1Y = document.getElementById("joy1Y");
+
+setInterval(function(){ joy1IinputPosX.value=Joy1.GetPosX(); }, 50);
+setInterval(function(){ joy1InputPosY.value=Joy1.GetPosY(); }, 50);
+setInterval(function(){ joy1Direzione.value=Joy1.GetDir(); }, 50);
+setInterval(function(){ joy1X.value=Joy1.GetX(); }, 50);
+setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
+
+// Create JoyStick object into the DIV 'joy2Div'
+var joy2Param = { "title": "joystick2", "autoReturnToCenter": true, "horizontal":true,
+								"leftCallback":function () {
+																					 $.getJSON('/moveLeft', { }, function(data) { });
+																				 },
+								 "rightCallback":function () {
+																					 $.getJSON('/moveRight', { }, function(data) { });
+																				 },
+								 "steeringOffCallback":function () {
+																					 $.getJSON('/steeringOff', { }, function(data) { });
+																				 },
+ };
+var Joy2 = new JoyStick('joy2Div', joy2Param);
+
+var joy2IinputPosX = document.getElementById("joy2PosizioneX");
+var joy2InputPosY = document.getElementById("joy2PosizioneY");
+var joy2Direzione = document.getElementById("joy2Direzione");
+var joy2X = document.getElementById("joy2X");
+var joy2Y = document.getElementById("joy2Y");
+
+setInterval(function(){ joy2IinputPosX.value=Joy2.GetPosX(); }, 50);
+setInterval(function(){ joy2InputPosY.value=Joy2.GetPosY(); }, 50);
+setInterval(function(){ joy2Direzione.value=Joy2.GetDir(); }, 50);
+setInterval(function(){ joy2X.value=Joy2.GetX(); }, 50);
+setInterval(function(){ joy2Y.value=Joy2.GetY(); }, 50);
+		</script>
+
+
+
+		<script type=text/javascript>
+				document.onkeydown = checkKey;
+				document.onkeyup = resetKey;
+
+
+				function resetKey(e) {
+					if (e.keyCode == '38' || e.keyCode == '40') {
+					  // go back to neutral
+					  Joy1.setPosition(100,100) ;
+						$.getJSON('/neutral', { }, function(data) { });
+				  }
+					if (e.keyCode == '37' || e.keyCode == '39') {
+					  // go back to neutral
+					  Joy2.setPosition(100,100) ;
+						$.getJSON('/steeringOff', { }, function(data) { });
+				  }
+				}
+				function checkKey(e) {
+						e = e || window.event;
+
+            // stop cursor key from scrolling window
+					  e.preventDefault();
+
+						if (e.keyCode == '38') {
+								// up arrow
+								//alert('move forward');
+								$.getJSON('/moveForward', { }, function(data) { });
+
+								// move vertical joystick on screen
+								// TODO: gradually set position so it's animated
+								Joy1.setPosition(0,-200);
+						} else if (e.keyCode == '40') {
+								// down arrow
+								$.getJSON('/moveBackward', { }, function(data) { });
+								Joy1.setPosition(0,200);
+						} else if (e.keyCode == '37') {
+							 // left arrow
+								$.getJSON('/moveLeft', { }, function(data) { });
+								Joy2.setPosition(-200,0);
+						} else if (e.keyCode == '39') {
+								// right arrow
+								$.getJSON('/moveRight', { }, function(data) { });
+								Joy2.setPosition(200,0);
+						}
+				}
+		</script>
