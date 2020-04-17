@@ -204,6 +204,7 @@ var JoyStick = (function(container, parameters) {
 /** animate joysticks via JS ***/
   this.setPosition = function(x,y)
   {
+    pressed = 0;
     context.clearRect(0, 0, canvas.width, canvas.height);
     movedX = x;
     movedY = y;
@@ -222,6 +223,9 @@ var JoyStick = (function(container, parameters) {
 	{
 		if(pressed==1)
 		{
+      var dx = Math.abs(movedX-event.pageX);
+      var dy = Math.abs(movedY-event.pageY);
+
 			movedX=event.pageX;
 			movedY=event.pageY;
 			// Manage offset
@@ -235,18 +239,18 @@ var JoyStick = (function(container, parameters) {
 
       // TODO: this gets triggered on every move
       // will trigger many events
-      if (movedY > 100 && downCallback != nil) {
+      if (dy > 10 && movedY > centerY && downCallback != nil) {
         downCallback();
-      } else if (movedY < 100 && upCallback != nil) {
+      } else if (dy > 10 && movedY < centerY && upCallback != nil) {
         upCallback();
-      } else if (neutralCallback != nil){
+      } else if (movedY == centerY && neutralCallback != nil){
         neutralCallback();
       }
-      if (movedX > 100 && rightCallback != nil) {
+      if (dx > 10 && movedX > centerX && rightCallback != nil) {
         rightCallback();
-      } else if (movedX < 100 && leftCallback != nil) {
+      } else if (dx > 10 && movedX < centerX && leftCallback != nil) {
         leftCallback();
-      } else if (steeringOffCallback != nil){
+      } else if (movedX == centerX && steeringOffCallback != nil){
         steeringOffCallback();
       }
 		}
