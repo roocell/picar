@@ -82,6 +82,12 @@ var JoyStick = (function(container, parameters) {
 	objContainer.appendChild(canvas);
 	var context=canvas.getContext('2d');
 
+  var up = 0;
+  var down = 0;
+  var left = 0;
+  var right = 0;
+
+
 	var pressed = 0; // Bool - 1=Yes - 0=No
     var circumference = 2 * Math.PI;
     var internalRadius = (canvas.width-((canvas.width/2)+10))/2;
@@ -239,25 +245,40 @@ var JoyStick = (function(container, parameters) {
 
       // TODO: this gets triggered on every move
       // will trigger many events
-      if (dy > 10 && movedY > centerY && downCallback != nil) {
-        downCallback();
-      } else if (dy > 10 && movedY < centerY && upCallback != nil) {
-        upCallback();
+      if ( movedY > centerY && downCallback != nil) {
+        if (up == 0) {
+          downCallback();
+          up = 1; down = 0;
+        }
+      } else if ( movedY < centerY && upCallback != nil) {
+        if (down == 0) {
+          upCallback();
+          down = 1; up = 0;
+        }
       } else if (movedY == centerY && neutralCallback != nil){
         neutralCallback();
+        up = 0; down = 0;
       }
-      if (dx > 10 && movedX > centerX && rightCallback != nil) {
-        rightCallback();
-      } else if (dx > 10 && movedX < centerX && leftCallback != nil) {
-        leftCallback();
+      if ( movedX > centerX && rightCallback != nil) {
+        if (right == 0) {
+          rightCallback();
+          right = 1; left = 0;
+        }
+      } else if ( movedX < centerX && leftCallback != nil) {
+        if (left == 0) {
+          leftCallback();
+          left = 1; right = 0;
+        }
       } else if (movedX == centerX && steeringOffCallback != nil){
         steeringOffCallback();
+        left = 0; right = 0;
       }
 		}
 	}
 	function onMouseUp(event)
 	{
 		pressed=0;
+    up = down = left = right = 0;
 		// If required reset position store variable
 		if(autoReturnToCenter)
 		{

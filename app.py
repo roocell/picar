@@ -1,14 +1,19 @@
+#!/usr/bin/env python3
+
 from flask import Flask, jsonify, render_template, request, send_from_directory
 import os
 import mjpg_streamer
 import snap
 import picar
 import atexit
+import time
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
+    picar.setup()  # needs to be in index() otherwise weird output
+
     top = """<!DOCTYPE HTML>
     <html>
     	<head>
@@ -76,10 +81,12 @@ def steeringOff():
 
 
 def cleanup():
-    picar.destroy()
+    print("cleaning up")
+    #picar.destroy()
 
 if __name__ == '__main__':
     mjpg_streamer.start("320x240", "10")
     atexit.register(cleanup)
-    picar.setup()
+
+
     app.run(debug=True, host='0.0.0.0')

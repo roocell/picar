@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import RPi.GPIO as GPIO
 import time
@@ -12,12 +10,21 @@ drivePin1 = 18 # gpio23
 drivePin2 = 16 # gpio24
 driveEnablePin = 22 #gpio25
 
+picarIsSetup = 0
+
 def mapNUM(value,fromLow,fromHigh,toLow,toHigh):
     return (toHigh-toLow)*(value-fromLow) / (fromHigh-fromLow) + toLow
 
 def setup():
     global pDrive
     global pSteer
+    global picarIsSetup
+
+    # user could hit refresh - we don't want to setup the PI hardware again.
+    if (picarIsSetup == 1):
+        return
+
+    picarIsSetup = 1
 
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(steeringPin1,GPIO.OUT)   # set pins to OUTPUT mode
