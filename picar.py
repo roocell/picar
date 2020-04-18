@@ -2,6 +2,9 @@ import os
 import RPi.GPIO as GPIO
 import time
 
+# turning off warnings because we see them when the flask server reloads
+GPIO.setwarnings(False)
+
 steeringPin1 = 11 # gpio27
 steeringPin2 = 13 # gpio17
 steeringEnablePin = 15 # gpio22
@@ -20,7 +23,7 @@ def setup():
     global pSteer
     global picarIsSetup
 
-    # user could hit refresh - we don't want to setup the PI hardware again.
+    # user could hit refresh - we don't want to setup the PI harware
     if (picarIsSetup == 1):
         return
 

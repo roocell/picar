@@ -41,6 +41,9 @@ def download_file(filename):
     mypath = os.path.join(app.static_folder, 'images')
     return send_from_directory(mypath, filename, as_attachment=True)
 
+@app.route('/location')
+def location():
+    return render_template('location.html')
 
 @app.route('/moveForward')
 def moveForward():
@@ -88,5 +91,5 @@ if __name__ == '__main__':
     mjpg_streamer.start("320x240", "10")
     atexit.register(cleanup)
 
-
-    app.run(debug=True, host='0.0.0.0')
+    #https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https
+    app.run(ssl_context='adhoc', debug=True, host='0.0.0.0')
