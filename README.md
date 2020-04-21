@@ -1,2 +1,2 @@
 # picar
-![picar v1](https://imgur.com/a/BXX3W43)
+![picar v1](picar_v1.jpg)
