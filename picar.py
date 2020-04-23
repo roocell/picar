@@ -2,6 +2,9 @@ import os
 import RPi.GPIO as GPIO
 import time
 
+location = {"lat":0, "lon":0}
+
+
 # turning off warnings because we see them when the flask server reloads
 GPIO.setwarnings(False)
 

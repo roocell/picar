@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 
-from flask import Flask, jsonify, render_template, request, send_from_directory
+# the idea here is to have a phone connected to the picar webserver
+# a special location page so the webserver can ask the phone for the geolocation
+# and send the location back to the server. so it can then display it on a
+# map (to other devices - like the controller)
+# the phone will be on the car as well - so it will essentially track the car's
+# location
+
+from flask import Flask, jsonify, request, jsonify, render_template, request, send_from_directory
 import os
 import mjpg_streamer
 import snap
 import picar
 import atexit
 import time
+import apikeys
 
 app = Flask(__name__)
 
@@ -43,7 +51,31 @@ def download_file(filename):
 
 @app.route('/location')
 def location():
-    return render_template('location.html')
+    return render_template('location.html', key = apikeys.google_map_api)
+@app.route('/updatelocation', methods=['GET', 'POST'])
+def updatelocation():
+    # this will update the blue dot location on the map(s)
+    print("updating location")
+
+    # POST request
+    if request.method == 'POST':
+        print('Incoming..')
+        position = request.get_json() # (force=True to ignore mimetype)
+        print(position)  # parse as JSON
+        # store this in a serverside global for picar's location
+        picar.location = position
+        return 'OK', 200
+    # GET request
+    else:
+        message = {'greeting':'Hello from Flask!'}
+        return jsonify(message)  # serialize and use JSON headers
+    return "Nothing"
+@app.route('/picar_location')
+def picar_location():
+    print(picar.location)
+    return jsonify(picar.location)
+
+
 
 @app.route('/moveForward')
 def moveForward():
@@ -92,4 +124,6 @@ if __name__ == '__main__':
     atexit.register(cleanup)
 
     #https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https
+    #app.run(ssl_context=('cert.pem', 'key.pem'), debug=True, host='0.0.0.0')
     app.run(ssl_context='adhoc', debug=True, host='0.0.0.0')
+    #app.run(debug=True, host='0.0.0.0')

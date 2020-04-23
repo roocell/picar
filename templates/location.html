@@ -1,11 +1,25 @@
 <!DOCTYPE html>
 <html>
-<body>
-
-<p id="location"></p>
-
+<head>
+  <title>Simple Map</title>
+  <meta name="viewport" content="initial-scale=1.0">
+  <meta charset="utf-8">
+  <style>
+    /* Always set the map height explicitly to define the size of the div
+     * element that contains the map. */
+    #map {
+      height: 100%;
+    }
+    /* Optional: Makes the sample page fill the window. */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<script type="text/javascript" src="/static/jquery.min.js"> </script>
 <script>
-var x = document.getElementById("location");
 
 // position isn't the right kind of object to be used by JSON.stringify
 function cloneAsObject(obj) {
@@ -20,28 +34,96 @@ function cloneAsObject(obj) {
     return temp;
 }
 
+var map;
+//var picar_marker = new google.maps.Marker({position: latlng, icon:icon, map: map});
+
 window.onload = function() {
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(showPosition);
+
+    var iphone_icon = {
+        url: "/static/iphone.png", // url
+        scaledSize: new google.maps.Size(25, 25), // scaled size
+        origin: new google.maps.Point(0,0), // origin
+        anchor: new google.maps.Point(0, 0) // anchor
+      };
+    var picar_icon = {
+        url: "/static/raspi.png", // url
+        scaledSize: new google.maps.Size(25, 25), // scaled size
+        origin: new google.maps.Point(0,0), // origin
+        anchor: new google.maps.Point(0, 0) // anchor
+      };
+    var picar_marker = new google.maps.Marker({icon: picar_icon, map: map});
+    var iphone_marker = new google.maps.Marker({icon: iphone_icon, map: map});
 
 			var watchId = navigator.geolocation.watchPosition(function(position) {
 				console.log(position.coords);
 				document.getElementById('location').innerHTML = JSON.stringify(cloneAsObject(position.coords));
+        if (map)
+        {
+          // offset the iphone position every so slightly so we can see both markers
+          offset = 0.005;
+          var latlng = new google.maps.LatLng(position.coords.latitude+offset, position.coords.longitude);
+          map.setCenter(latlng);
+        }
+        iphone_marker.setPosition(latlng);
+
+        // send location back to server
+        // if you want to send data to flask you have to use a post
+        // https://healeycodes.com/javascript/python/beginners/webdev/2019/04/11/talking-between-languages.html
+        fetch('/updatelocation', {
+            method: 'POST',
+            headers: new Headers({'content-type': 'application/json'}),
+            body: JSON.stringify(cloneAsObject(position.coords))
+        }).then(function (response) { // At this point, Flask has printed our JSON
+            return response.text();
+        }).then(function (text) {
+
+            console.log('POST response: ');
+
+            // Should be 'OK' if everything was successful
+            console.log(text);
+
+            // now that the location is updated, get the server's view
+            fetch('/picar_location')
+              .then(function (response) {
+                  return response.json();
+              }).then(function (json) {
+                  console.log('GET response JSON:');
+                  console.log(json); // Print the greeting as text
+                  var latlng = new google.maps.LatLng(json.latitude,json.longitude);
+                  picar_marker.setPosition(latlng);
+
+              });
+
+
+        });
+
 			});
 
   } else {
-    x.innerHTML = "Geolocation is not supported by this browser.";
+    document.getElementById('location').innerHTML = "Geolocation is not supported by this browser.";
   }
 }
 
-function showPosition(position) {
-  x.innerHTML = "Latitude: " + position.coords.latitude +
-  "<br>Longitude: " + position.coords.longitude;
-}
-
+  function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: {lat: 0, lng: 0},
+      zoom: 8
+    });
+  }
 
 
 </script>
+
+
+<body>
+
+<p id="location"></p>
+<div id="map"></div>
+
+
+
+<script src="https://maps.googleapis.com/maps/api/js?key={{key}}&callback=initMap" async defer></script>
 
 </body>
 </html>
