@@ -42,19 +42,32 @@ body
 }
 		</style>
 
-		<script src="{{ url_for('static', filename='JoyStick/joy.js') }}"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
 		<script type="text/javascript" src="/static/jquery.min.js"> </script>
+		<script src="{{ url_for('static', filename='JoyStick/joy.js') }}"></script>
 
-		<script type="text/javascript" >
-		fetch('/picar_location')
-			.then(function (response) {
-					return response.json();
-			}).then(function (json) {
-					console.log('GET response JSON:');
-					console.log(json); // Print the greeting as text
-          document.getElementById('location').innerHTML = JSON.stringify(json);
+		<script type="text/javascript">
+			// socket IO client side
+			$(document).ready(function(){
+		    var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
+		    socket.on('location updated', function(json) {
+					  console.log("received location update");
+						console.log(json);
+					  document.getElementById('location').innerHTML = JSON.stringify(json);
+		    });
+				// could use sockets to do the jockstick controls as well
+				// but we'll keep what we already have for now
+		    // $('form#emit').submit(function(event) {
+		    //     socket.emit('my event', {data: $('#emit_data').val()});
+		    //     return false;
+		    // });
+		    // $('form#broadcast').submit(function(event) {
+		    //     socket.emit('my broadcast event', {data: $('#broadcast_data').val()});
+		    //     return false;
+		    // });
 			});
-    </script>
+		</script>
+
 
 		<div class="row">
 			<div class="columnLateral">
@@ -65,15 +78,20 @@ body
 				X :<input id="joy1X" type="text" /></br>
 				Y :<input id="joy1Y" type="text" />
 			</div>
+
+			<!-- location display -->
 			<div class="columnCetral">
 				<div id=location>
 					0.0
 				</div>
+
+				<!-- video -->
 				<div>
 		      <object type="text/html" data="http://192.168.1.109:8085/stream_simple.html"
 		         width="640px" height="480px" style="overflow:auto;">
 		      </object>
 		    </div>
+
 			</div>
 			<div class="columnLateral">
 				<div id="joy2Div"></div>

@@ -18,6 +18,7 @@
     }
   </style>
 </head>
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
 <script type="text/javascript" src="/static/jquery.min.js"> </script>
 <script>
 
@@ -40,15 +41,29 @@ var map;
 window.onload = function() {
   if (navigator.geolocation) {
 
+    // send location back to server over the socket
+    var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
+
+    // callback for when server emits "location update"
+    socket.on('location updated', function(msg) {
+      console.log("received location updated event")
+      console.log(msg); // Print the greeting as text
+      var latlng = new google.maps.LatLng(msg.latitude,msg.longitude);
+      picar_marker.setPosition(latlng)
+      document.getElementById('location').innerHTML = JSON.stringify(msg);
+
+    });
+
+
     var iphone_icon = {
-        url: "/static/iphone.png", // url
-        scaledSize: new google.maps.Size(25, 25), // scaled size
+        url: "/static/iphone.png", // url  70x125
+        scaledSize: new google.maps.Size(35, 67), // scaled size
         origin: new google.maps.Point(0,0), // origin
         anchor: new google.maps.Point(0, 0) // anchor
       };
     var picar_icon = {
-        url: "/static/raspi.png", // url
-        scaledSize: new google.maps.Size(25, 25), // scaled size
+        url: "/static/raspi.png", // url   400 x 512
+        scaledSize: new google.maps.Size(25, 32), // scaled size
         origin: new google.maps.Point(0,0), // origin
         anchor: new google.maps.Point(0, 0) // anchor
       };
@@ -57,7 +72,6 @@ window.onload = function() {
 
 			var watchId = navigator.geolocation.watchPosition(function(position) {
 				console.log(position.coords);
-				document.getElementById('location').innerHTML = JSON.stringify(cloneAsObject(position.coords));
         if (map)
         {
           // offset the iphone position every so slightly so we can see both markers
@@ -67,38 +81,10 @@ window.onload = function() {
         }
         iphone_marker.setPosition(latlng);
 
-        // send location back to server
-        // if you want to send data to flask you have to use a post
-        // https://healeycodes.com/javascript/python/beginners/webdev/2019/04/11/talking-between-languages.html
-        fetch('/updatelocation', {
-            method: 'POST',
-            headers: new Headers({'content-type': 'application/json'}),
-            body: JSON.stringify(cloneAsObject(position.coords))
-        }).then(function (response) { // At this point, Flask has printed our JSON
-            return response.text();
-        }).then(function (text) {
+        // send location to server
+        socket.emit('new location', {data: JSON.stringify(cloneAsObject(position.coords))});
 
-            console.log('POST response: ');
-
-            // Should be 'OK' if everything was successful
-            console.log(text);
-
-            // now that the location is updated, get the server's view
-            fetch('/picar_location')
-              .then(function (response) {
-                  return response.json();
-              }).then(function (json) {
-                  console.log('GET response JSON:');
-                  console.log(json); // Print the greeting as text
-                  var latlng = new google.maps.LatLng(json.latitude,json.longitude);
-                  picar_marker.setPosition(latlng);
-
-              });
-
-
-        });
-
-			});
+    });
 
   } else {
     document.getElementById('location').innerHTML = "Geolocation is not supported by this browser.";
@@ -108,7 +94,7 @@ window.onload = function() {
   function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
       center: {lat: 0, lng: 0},
-      zoom: 8
+      zoom: 14
     });
   }
 

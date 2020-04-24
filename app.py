@@ -8,6 +8,7 @@
 # location
 
 from flask import Flask, jsonify, request, jsonify, render_template, request, send_from_directory
+import json
 import os
 import mjpg_streamer
 import snap
@@ -18,6 +19,7 @@ import apikeys
 from config import Config
 import models
 from models import db, Picar
+from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -41,6 +43,48 @@ with app.app_context():
     #ppp = Picar.query.get(0)
     print("got picar from db name:" + ppp.name)
 
+
+
+#=============================================================
+# location routes w/ scoketio
+@app.route('/location')
+def location():
+    return render_template('location.html', key = apikeys.google_map_api)
+
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
+
+# incoming
+@socketio.on('new location', namespace='/updatelocation')
+def updatelocationIO(message):
+    print("======================================")
+    print("client updated location via SOCKET")
+    emit('my response', {'data': 'OK'})
+    # TODO: json.loads doesnt' get all the decimal places.
+    data = json.loads(message['data'])
+    print(data)
+    picarDb = Picar.query.filter_by(id=1).first()
+    picarDb.latitude = data['latitude']
+    picarDb.longitude = data['longitude']
+    db.session.commit()
+    loc = {"latitude":picarDb.latitude, "longitude":picarDb.longitude}
+    emit('location updated', loc, broadcast=True)
+
+# outgoing
+@socketio.on('connect', namespace='/updatelocation')
+def test_connect():
+    print("client connected")
+    picarDb = Picar.query.filter_by(id=1).first()
+    loc = {"latitude":picarDb.latitude, "longitude":picarDb.longitude}
+    print("DB " + str(loc))
+    emit('location updated', loc)
+
+
+
+
+
+#==============================================
+# index route
 @app.route('/')
 def index():
     picar.setup()  # needs to be in index() otherwise weird output
@@ -57,7 +101,12 @@ def index():
     bottom =  "</html>"
     return top+render_template('joy.html')+render_template('snap.html', browser=snap.browser())+bottom
 
+
+
+
+
 #=============================================================
+# snapshot routes
 @app.route('/takeSnapshot')
 def takeSnapshot():
     print('taking picture...')
@@ -73,48 +122,11 @@ def download_file(filename):
     mypath = os.path.join(app.static_folder, 'images')
     return send_from_directory(mypath, filename, as_attachment=True)
 
-#=============================================================
-@app.route('/location')
-def location():
-    return render_template('location.html', key = apikeys.google_map_api)
-@app.route('/updatelocation', methods=['GET', 'POST'])
-def updatelocation():
-    # this will update the blue dot location on the map(s)
-    print("updating location")
 
-    # POST request
-    if request.method == 'POST':
-        print('Incoming..')
-        position = request.get_json() # (force=True to ignore mimetype)
-        print(position)  # parse as JSON
-        # store this in a serverside global for picar's location
-        # this is only good in the current session
-        picar.location = position
-
-        # but we want this to be retrieve by another session
-        # so we have to use a DB
-        picarDb = Picar.query.filter_by(id=1).first()
-        print("got picar from db name:" + picarDb.name)
-        picarDb.latitude = position['latitude']
-        picarDb.longitude = position['longitude']
-        db.session.commit()
-        return 'OK', 200
-    # GET request
-    else:
-        message = {'greeting':'Hello from Flask!'}
-        return jsonify(message)  # serialize and use JSON headers
-    return "Nothing"
-@app.route('/picar_location')
-def picar_location():
-    print("picar.location " + str(picar.location))
-    picarDb = Picar.query.filter_by(id=1).first()
-    loc = {"latitude":str(picarDb.latitude), "longitude":str(picarDb.longitude)}
-    print("DB " +str(loc))
-    return jsonify(loc)
 
 
 #=============================================================
-
+# movement routes
 @app.route('/moveForward')
 def moveForward():
     print('moving forward')
@@ -152,7 +164,7 @@ def steeringOff():
     return "Nothing"
 
 
-
+#=====================================================
 def cleanup():
     print("cleaning up")
     #picar.destroy()
@@ -161,7 +173,13 @@ if __name__ == '__main__':
     mjpg_streamer.start("320x240", "10")
     atexit.register(cleanup)
 
-    #https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https
+
+    # https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https
     #app.run(ssl_context=('cert.pem', 'key.pem'), debug=True, host='0.0.0.0')
-    app.run(ssl_context='adhoc', debug=True, host='0.0.0.0')
+    #app.run(ssl_context='adhoc', debug=True, host='0.0.0.0')
     #app.run(debug=True, host='0.0.0.0')
+
+    print("running socketio")
+    # can't use adgoc. evenlet only work in production server so need to use the SSL files
+    socketio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0')
+    print("done run socketio")
