@@ -15,8 +15,31 @@ import picar
 import atexit
 import time
 import apikeys
+from config import Config
+import models
+from models import db, Picar
 
 app = Flask(__name__)
+app.config.from_object(Config)
+db.init_app(app)
+
+# create db if it doesn't exists
+with app.app_context():
+    db.create_all()
+    exists = db.session.query(db.exists().where(Picar.id == 1)).scalar()
+
+    #exists = Picar.query.filter_by(id=0).first().scalar()
+    if (exists == 0):
+        print("creating defaults for picar in db")
+        picarDb = Picar(name = "picarv1")
+        db.session.add(picarDb)
+        db.session.commit()
+
+    # query to make sure it's in there
+    #ppp = db.session.query(db.exists().where(Picar.id == 0))
+    ppp = Picar.query.filter_by(id=1).first()
+    #ppp = Picar.query.get(0)
+    print("got picar from db name:" + ppp.name)
 
 @app.route('/')
 def index():
@@ -34,6 +57,7 @@ def index():
     bottom =  "</html>"
     return top+render_template('joy.html')+render_template('snap.html', browser=snap.browser())+bottom
 
+#=============================================================
 @app.route('/takeSnapshot')
 def takeSnapshot():
     print('taking picture...')
@@ -49,6 +73,7 @@ def download_file(filename):
     mypath = os.path.join(app.static_folder, 'images')
     return send_from_directory(mypath, filename, as_attachment=True)
 
+#=============================================================
 @app.route('/location')
 def location():
     return render_template('location.html', key = apikeys.google_map_api)
@@ -63,7 +88,16 @@ def updatelocation():
         position = request.get_json() # (force=True to ignore mimetype)
         print(position)  # parse as JSON
         # store this in a serverside global for picar's location
+        # this is only good in the current session
         picar.location = position
+
+        # but we want this to be retrieve by another session
+        # so we have to use a DB
+        picarDb = Picar.query.filter_by(id=1).first()
+        print("got picar from db name:" + picarDb.name)
+        picarDb.latitude = position['latitude']
+        picarDb.longitude = position['longitude']
+        db.session.commit()
         return 'OK', 200
     # GET request
     else:
@@ -72,10 +106,14 @@ def updatelocation():
     return "Nothing"
 @app.route('/picar_location')
 def picar_location():
-    print(picar.location)
-    return jsonify(picar.location)
+    print("picar.location " + str(picar.location))
+    picarDb = Picar.query.filter_by(id=1).first()
+    loc = {"latitude":str(picarDb.latitude), "longitude":str(picarDb.longitude)}
+    print("DB " +str(loc))
+    return jsonify(loc)
 
 
+#=============================================================
 
 @app.route('/moveForward')
 def moveForward():

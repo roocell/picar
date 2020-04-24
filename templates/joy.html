@@ -45,6 +45,17 @@ body
 		<script src="{{ url_for('static', filename='JoyStick/joy.js') }}"></script>
 		<script type="text/javascript" src="/static/jquery.min.js"> </script>
 
+		<script type="text/javascript" >
+		fetch('/picar_location')
+			.then(function (response) {
+					return response.json();
+			}).then(function (json) {
+					console.log('GET response JSON:');
+					console.log(json); // Print the greeting as text
+          document.getElementById('location').innerHTML = JSON.stringify(json);
+			});
+    </script>
+
 		<div class="row">
 			<div class="columnLateral">
 				<div id="joy1Div" style="width:200px;height:200px;margin:50px"></div>
@@ -55,6 +66,9 @@ body
 				Y :<input id="joy1Y" type="text" />
 			</div>
 			<div class="columnCetral">
+				<div id=location>
+					0.0
+				</div>
 				<div>
 		      <object type="text/html" data="http://192.168.1.109:8085/stream_simple.html"
 		         width="640px" height="480px" style="overflow:auto;">
