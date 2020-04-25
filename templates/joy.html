@@ -52,8 +52,13 @@ body
 		    var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
 		    socket.on('location updated', function(json) {
 					  console.log("received location update");
-						console.log(json);
+						console.log(json)
 					  document.getElementById('location').innerHTML = JSON.stringify(json);
+
+						// load the webcam into the div using jquery
+						// this didn't work.
+						//$("#webcam").load("https://192.168.1.109:8888/stream_simple.html");
+
 		    });
 				// could use sockets to do the jockstick controls as well
 				// but we'll keep what we already have for now
@@ -67,7 +72,6 @@ body
 		    // });
 			});
 		</script>
-
 
 		<div class="row">
 			<div class="columnLateral">
@@ -86,13 +90,16 @@ body
 				</div>
 
 				<!-- video -->
-				<div>
-		      <object type="text/html" data="http://192.168.1.109:8085/stream_simple.html"
+				<div id="webcam">
+		      <object type="text/html" data="https://192.168.1.109:8888/stream_simple.html"
 		         width="640px" height="480px" style="overflow:auto;">
 		      </object>
+
 		    </div>
 
+
 			</div>
+
 			<div class="columnLateral">
 				<div id="joy2Div"></div>
 				Posizione X:<input id="joy2PosizioneX" type="text" /></br>
