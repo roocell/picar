@@ -18,13 +18,13 @@ socketio = SocketIO(app)
 
 @app.route('/')
 def index():
-    return "<html> </html>"
+    return "<html> picar socketio server </html>"
 # incoming
 @socketio.on("hb_from_client", namespace='/heartbeat')
 def hb_from_client(message):
     print("======================================")
     print("rx client HEARBEAT")
-    socketio.emit('server_response', {'data': 'OK'})
+    return "OK"
 
 def m_hb_cb(data):
     print("m_hb_cb: " + data)

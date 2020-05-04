@@ -4,17 +4,34 @@
 import socketio
 import time
 
+# uses openCV for USB camera feed
+#import cv2
+#from base_camera import BaseCamera
+
+# uses picamera for pi camera feed
+#import picamera
+
+URL = "http://www.roocell.com:5000"
+connected = 0
+hb_time = 0
+
 sio = socketio.Client()
 
 @sio.event
 def connect():
+    global connected
+    connected = 1
     print('connection established')
     print('my sid is', sio.sid)
 @sio.event
 def connect_error():
+    global connected
+    connected = 0
     print("The connection failed!")
 @sio.event
 def disconnect():
+    global connected
+    connected = 0
     print('disconnected from server')
 
 @sio.event
@@ -23,9 +40,11 @@ def hb_from_server(data):
     sio.emit('my response', {'response': 'my response'})
     return "OK"
 
-#@sio.on('hb_from_server')
-#def on_message(data):
-#    print('I received hb_from_server!')
+def hb_response(data):
+    global hb_time
+    milliseconds = int(round((time.time()-hb_time) * 1000))
+    print("server returned " + str(data) + " (rt=" + str(milliseconds) +"ms)")
+
 
 def background_task(my_argument):
     # do some background work here!
@@ -36,15 +55,19 @@ def background_task(my_argument):
     pass
 
 
-print("connecting...")
 sio.start_background_task(background_task, 123)
-sio.connect('http://localhost:5000', namespaces=['/heartbeat'])
-
-#sio.wait()
-time.sleep(3)
+while connected == 0:
+    try:
+        print("connecting... " + str(connected))
+        sio.connect(URL, namespaces=['/heartbeat'])
+    except:
+        print("ERROR: connection refused: check your URL, server running, port forwarding, internet connection, etc")
+    time.sleep(1)
 
 print("entering main loop")
 while 1:
-    time.sleep(3)
     print("ML: sending hb_from_client")
-    sio.emit("hb_from_client", {'foo' : 'bar'}, namespace='/heartbeat')
+    hb_time = time.time()
+    sio.emit("hb_from_client", {'foo' : 'bar'}, namespace='/heartbeat', callback=hb_response)
+    time.sleep(10)
+    
