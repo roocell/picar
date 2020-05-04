@@ -23,23 +23,24 @@ body
 .columnCetral
 {
   float: left;
-  width: 70%;
   min-width: 300px;
-}
-#joy2Div
-{
-	width:200px;
-	height:200px;
-	margin:50px
 }
 #joystick
 {
 	border: 1px solid #FF0000;
 }
-#joystick2
-{
-	border: 1px solid #0000FF;
+#map {
+	//width: {{webcam_w}};
+	//height: {{webcam_h}};
+	width:800px;
+	height:600px;
 }
+#webcam {
+	overflow: auto;
+	width: {{webcam_w}};
+	height: {{webcam_h}};
+}
+
 		</style>
 
 		<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
@@ -47,14 +48,73 @@ body
 		<script src="{{ url_for('static', filename='JoyStick/joy.js') }}"></script>
 
 		<script type="text/javascript">
+			var map;
+
 			// socket IO client side
-			$(document).ready(function(){
-		    var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
+      window.onload = function() {
+			    var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
 		    socket.on('location updated', function(json) {
-					  console.log("received location update");
-						console.log(json);
-					  document.getElementById('location').innerHTML = JSON.stringify(json);
-		    });
+					  console.log("received picar location update");
+						console.log(json)
+						var locdiv = document.getElementById('location');
+					  locdiv.innerHTML = JSON.stringify(json);
+						var latlng = new google.maps.LatLng(json.latitude, json.longitude);
+						picar_marker.setPosition(latlng);
+
+						// flash coordinates for a second
+ 						locdiv.style = "background-color: yellow;"
+						setTimeout(function() {
+										// TODO: a new location may arrive and this timer could kill it
+						        locdiv.style="background-color: none;";
+						      }, 1000 );
+
+						// have map follow Car
+						map.setCenter(latlng);
+
+						// TODO:
+						// zoom out map depending on delta between controller and picar
+
+
+				}); // end socket.on
+
+				if (navigator.geolocation) {
+					var iphone_icon = {
+							url: "/static/iphone.png", // url  70x125
+							scaledSize: new google.maps.Size(35, 67), // scaled size
+							origin: new google.maps.Point(0,0), // origin
+							anchor: new google.maps.Point(0, 0) // anchor
+						};
+					var picar_icon = {
+							url: "/static/raspi.png", // url   400 x 512
+							scaledSize: new google.maps.Size(25, 32), // scaled size
+							origin: new google.maps.Point(0,0), // origin
+							anchor: new google.maps.Point(0, 0) // anchor
+						};
+					var picar_marker = new google.maps.Marker({icon: picar_icon, map: map});
+					var iphone_marker = new google.maps.Marker({icon: iphone_icon, map: map});
+
+
+					var watchId = navigator.geolocation.watchPosition(function(position) {
+						console.log("received our location");
+						console.log(position.coords);
+		        if (map)
+		        {
+		          // offset the iphone position every so slightly so we can see both markers
+		          var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+		          //map.setCenter(latlng);
+		        }
+						// update our location
+		        iphone_marker.setPosition(latlng);
+					}); // end watchPosition
+
+			  } else {
+			    document.getElementById('location').innerHTML = "Geolocation is not supported by this browser.";
+			  }
+
+			// load the webcam into the div using jquery
+			// this didn't work.
+			//$("#webcam").load("https://192.168.1.109:8888/stream_simple.html");
+
 				// could use sockets to do the jockstick controls as well
 				// but we'll keep what we already have for now
 		    // $('form#emit').submit(function(event) {
@@ -65,9 +125,9 @@ body
 		    //     socket.emit('my broadcast event', {data: $('#broadcast_data').val()});
 		    //     return false;
 		    // });
-			});
-		</script>
+			} // window on load
 
+		</script>
 
 		<div class="row">
 			<div class="columnLateral">
@@ -75,7 +135,7 @@ body
 				Posizione X:<input id="joy1PosizioneX" type="text" /><br />
 				Posizione Y:<input id="joy1PosizioneY" type="text" /><br />
 				Direzione:<input id="joy1Direzione" type="text" /><br />
-				X :<input id="joy1X" type="text" /></br>
+				X :<input id="joy1X" type="text" /><br />
 				Y :<input id="joy1Y" type="text" />
 			</div>
 
@@ -85,24 +145,22 @@ body
 					0.0
 				</div>
 
-				<!-- video -->
-				<div>
-		      <object type="text/html" data="http://192.168.1.109:8085/stream_simple.html"
-		         width="640px" height="480px" style="overflow:auto;">
+				<!-- video
+			TODO: video is VERY slow going through HTTPS like this.
+		        need to figure out a way to get the stream directly on this
+					  page for best results. -->
+				<div id="webcam_container" align=center>
+		      <object id="webcam" type="text/html"
+					data="https://192.168.1.109:8888/stream_simple.html">
 		      </object>
-		    </div>
 
-			</div>
-			<div class="columnLateral">
-				<div id="joy2Div"></div>
-				Posizione X:<input id="joy2PosizioneX" type="text" /></br>
-				Posizione Y:<input id="joy2PosizioneY" type="text" /></br>
-				Direzione:<input id="joy2Direzione" type="text" /></br>
-				X :<input id="joy2X" type="text" /></br>
-				Y :<input id="joy2Y" type="text" />
+		    </div>
+				<div id="map"></div>
 			</div>
 		</div>
+
 		<script type="text/javascript">
+
 // Create JoyStick object into the DIV 'joy1Div'
 var joyparams1 = { "title": "vertical", "vertical" : true,
           "upCallback":function () {
@@ -129,31 +187,6 @@ setInterval(function(){ joy1Direzione.value=Joy1.GetDir(); }, 50);
 setInterval(function(){ joy1X.value=Joy1.GetX(); }, 50);
 setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 
-// Create JoyStick object into the DIV 'joy2Div'
-var joy2Param = { "title": "joystick2", "autoReturnToCenter": true, "horizontal":true,
-								"leftCallback":function () {
-																					 $.getJSON('/moveLeft', { }, function(data) { });
-																				 },
-								 "rightCallback":function () {
-																					 $.getJSON('/moveRight', { }, function(data) { });
-																				 },
-								 "steeringOffCallback":function () {
-																					 $.getJSON('/steeringOff', { }, function(data) { });
-																				 },
- };
-var Joy2 = new JoyStick('joy2Div', joy2Param);
-
-var joy2IinputPosX = document.getElementById("joy2PosizioneX");
-var joy2InputPosY = document.getElementById("joy2PosizioneY");
-var joy2Direzione = document.getElementById("joy2Direzione");
-var joy2X = document.getElementById("joy2X");
-var joy2Y = document.getElementById("joy2Y");
-
-setInterval(function(){ joy2IinputPosX.value=Joy2.GetPosX(); }, 50);
-setInterval(function(){ joy2InputPosY.value=Joy2.GetPosY(); }, 50);
-setInterval(function(){ joy2Direzione.value=Joy2.GetDir(); }, 50);
-setInterval(function(){ joy2X.value=Joy2.GetX(); }, 50);
-setInterval(function(){ joy2Y.value=Joy2.GetY(); }, 50);
 		</script>
 
 
@@ -204,3 +237,20 @@ setInterval(function(){ joy2Y.value=Joy2.GetY(); }, 50);
 						}
 				}
 		</script>
+
+
+		<script type="text/javascript">
+		// <map>
+
+		function initMap() {
+			console.log("initmap");
+			map = new google.maps.Map(document.getElementById('map'), {
+				center: {lat: 0, lng: 0},
+				zoom: 20,
+				mapTypeId: google.maps.MapTypeId.SATELLITE,
+				disableDefaultUI: true
+			});
+		}
+    </script>
+
+		<script src="https://maps.googleapis.com/maps/api/js?key={{key}}&callback=initMap" async defer></script>
