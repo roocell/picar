@@ -1,5 +1,6 @@
 import os
 import datetime
+import glob
 
 def go():
   #cmd = "fswebcam -r 1280x720 --no-banner image3.jpg"
@@ -8,13 +9,16 @@ def go():
   cmd = "wget http://localhost:8085/?action=snapshot -O static/images/" + filename
   os.system(cmd)
 
-def browser():
+# TODO: this should really return json
+# and then the JS can make the innerHTML
+def innerHTML():
     from os import listdir
     from os.path import isfile, join
-    mypath = "static/images"
-    onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-    browser = ""
-    for file in onlyfiles:
-        url = mypath + "/" + file
-        browser += "<a href=\""+url+"\"> <img src=\""+url+"\" width=30 height=30>"+file+"</img></a><BR>"
-    return browser
+    mypath = "static/images/"
+    files = glob.glob(mypath+"*.jpg")
+    files.sort(key=os.path.getmtime, reverse=True)
+    innerHTML = ""
+    for file in files:
+        filename = os.path.basename(file)
+        innerHTML += "<a href=\""+file+"\"> <img src=\""+file+"\" width=30 height=30>"+filename+"</img></a><BR>"
+    return innerHTML

@@ -2,11 +2,25 @@
 this will snap a picture, store it in the PI and show a list of files
 that can be downloaded -->
 <script type=text/javascript>
-  $(function() { $("#snap").click(function (event) { $.getJSON('/takeSnapshot', { },function(data) { }); return false; }); });
+  $(function() { $("#snap").click(function (event) {
+    console.log("snap clicked");
+    fetch('/takeSnapshot', {
+            method: 'GET'
+        }).then(function (response) {
+          return response.text();
+        }).then(function (text) {
+          //console.log(text);
+          document.getElementById('snaplist').innerHTML = text;
+
+        });
+  });
+});
 </script>
 
 <div>
 <input type="submit" id="snap" value="snap">
 <BR>
-{{browser | safe}}
+  <div id=snaplist>
+{{innerHTML | safe}}
+</div>
 </div>

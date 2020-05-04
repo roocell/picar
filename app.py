@@ -7,7 +7,7 @@
 # the phone will be on the car as well - so it will essentially track the car's
 # location
 
-from flask import Flask, jsonify, request, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, render_template, request, send_from_directory
 import json
 import os
 import mjpg_streamer
@@ -20,6 +20,10 @@ from config import Config
 import models
 from models import db, Picar
 from flask_socketio import SocketIO, emit
+
+webcam_w = 320
+webcam_h = 240
+fps = 10
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -96,10 +100,16 @@ def index():
     		<meta charset="utf-8">
     		<meta name="description" content="Raspberry Pi control RC car.">
     		<meta name="author" content="Michael Russell">
+            <meta name="viewport" content="initial-scale=1.0">
     		<link rel="shortcut icon" type="image/png" href="static/raspi.png">
-            </head> """
-    bottom =  "</html>"
-    return top+render_template('joy.html')+render_template('snap.html', browser=snap.browser())+bottom
+            </head><body> """
+    bottom =  "</body></html>"
+    return top + \
+           render_template('joy.html', key = apikeys.google_map_api,
+                              # need a little more to get rid of the scrollbars
+                               webcam_w=str(webcam_w+20)+"px", webcam_h=str(webcam_h+20)+"px") + \
+           render_template('snap.html', innerHTML=snap.innerHTML()) + \
+           bottom
 
 
 
@@ -111,7 +121,7 @@ def index():
 def takeSnapshot():
     print('taking picture...')
     snap.go()
-    return "Nothing"
+    return snap.innerHTML()
 
 # allows static file subdirectories to be download / displayed
 @app.route('/static/images')
@@ -170,7 +180,7 @@ def cleanup():
     #picar.destroy()
 
 if __name__ == '__main__':
-    mjpg_streamer.start("320x240", "10")
+    mjpg_streamer.start(webcam_w, webcam_h, fps)
     atexit.register(cleanup)
 
 
