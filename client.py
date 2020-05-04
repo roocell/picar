@@ -59,7 +59,11 @@ def background_task(my_argument):
 def gen(camera):
     while True:
         frame = camera.get_frame()
-        sio.emit("video_source", frame, namespace='/video')
+        print("sending frame")
+        try:
+            sio.emit("video_source", frame, namespace='/video')
+        except:
+            print("server is busy...trying again")
 
 
 sio.start_background_task(background_task, 123)
