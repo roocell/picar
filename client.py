@@ -1,15 +1,17 @@
 #!/usr/local/bin python3
 
 # a python socketio client
+# https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
 import socketio
-import time
+import time, os
+from importlib import import_module
 
-# uses openCV for USB camera feed
-#import cv2
-#from base_camera import BaseCamera
+# import camera driver
+if os.environ.get('CAMERA'):
+    Camera = import_module('camera_' + os.environ['CAMERA']).Camera
+else:
+    from camera import Camera
 
-# uses picamera for pi camera feed
-#import picamera
 
 URL = "http://www.roocell.com:5000"
 connected = 0
@@ -54,15 +56,22 @@ def background_task(my_argument):
     print("my background task says: yo!")
     pass
 
+def gen(camera):
+    while True:
+        frame = camera.get_frame()
+        sio.emit("video_source", frame, namespace='/video')
+
 
 sio.start_background_task(background_task, 123)
 while connected == 0:
     try:
         print("connecting... " + str(connected))
-        sio.connect(URL, namespaces=['/heartbeat'])
+        sio.connect(URL, namespaces=['/heartbeat', '/video'])
     except:
         print("ERROR: connection refused: check your URL, server running, port forwarding, internet connection, etc")
     time.sleep(1)
+
+gen(Camera())
 
 print("entering main loop")
 while 1:
@@ -70,4 +79,3 @@ while 1:
     hb_time = time.time()
     sio.emit("hb_from_client", {'foo' : 'bar'}, namespace='/heartbeat', callback=hb_response)
     time.sleep(10)
-    
