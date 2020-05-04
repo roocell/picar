@@ -54,7 +54,7 @@ def m_hb_cb(data):
 def video_source(message):
     print("=======================")
     print("rx video frame")
-    print(message)
+    #print(message)
     # push this frame to the video destination client
     #camera.frame = message
     return "OK"
@@ -65,6 +65,10 @@ def gen(camera):
         frame = camera.get_frame()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        # this religuishes the CPU so another route can be processed
+        # but it's far from true concurrency
+        # https://github.com/miguelgrinberg/Flask-SocketIO/issues/896
+        socketio.sleep(0)
 
 @app.route('/video_feed')
 def video_feed():
