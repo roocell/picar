@@ -13,7 +13,8 @@ import os, time
 import apikeys
 from flask_socketio import SocketIO, emit
 
-from camera import Camera
+from camera_relay import Camera
+relayCam = Camera()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -50,17 +51,26 @@ def m_hb_cb(data):
     print("m_hb_cb: " + data)
 
 
+def getFrame():
+    global frame
+    return frame
+
+def setFrame(f):
+    global frame
+    frame = f
+
 @socketio.on("video_source", namespace='/video')
 def video_source(message):
     print("=======================")
     print("rx video frame")
     #print(message)
     # push this frame to the video destination client
-    #camera.frame = message
+    relayCam.set(message)
     return "OK"
 
 def gen(camera):
     """Video streaming generator function."""
+
     while True:
         frame = camera.get_frame()
         yield (b'--frame\r\n'
@@ -73,7 +83,7 @@ def gen(camera):
 @app.route('/video_feed')
 def video_feed():
     #"""Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(gen(Camera()),
+    return Response(gen(relayCam),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
