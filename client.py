@@ -3,8 +3,16 @@
 # a python socketio client
 # https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
 import socketio
-import time, os, io
+import time, os, io, datetime
 from importlib import import_module
+import logging
+
+os.environ['CAMERA'] = "opencv"
+os.environ['OPENCV_CAMERA_SOURCE'] = "0"
+fps = 1
+URL = "http://www.roocell.com:5000"
+connected = 0
+hb_time = 0
 
 # import camera driver
 if os.environ.get('CAMERA'):
@@ -12,10 +20,14 @@ if os.environ.get('CAMERA'):
 else:
     from camera import Camera
 
-
-URL = "http://www.roocell.com:5000"
-connected = 0
-hb_time = 0
+# create logger
+log = logging.getLogger('client.py')
+log.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+log.addHandler(ch)
 
 sio = socketio.Client()
 
@@ -57,14 +69,22 @@ def background_task(my_argument):
     pass
 
 def gen(camera):
+    last_tx = 0
+    cnt = 0
     while True:
-        frame = camera.get_frame()
-        print("sending frame")
-        try:
-            #sio.emit("video_source", BytesIO(frame).getvalue(), namespace='/video')
-            sio.emit("video_source", frame, namespace='/video')
-        except:
-            print("server is busy...trying again")
+        ms = int(round((time.time()-last_tx) * 1000))
+        if (ms >= 1000/fps):
+            frame = camera.get_frame()
+            #print("sending frame " + str(ms) + " ms")
+            try:
+                sio.emit("video_source", frame, namespace='/video')
+            except:
+                print("server is busy...trying again")
+            last_tx = time.time()
+            cnt += 1
+            if (cnt > 100):
+                log.debug("sent 100 frames")
+                cnt = 0
 
 
 sio.start_background_task(background_task, 123)
