@@ -19,7 +19,14 @@ class Camera(BaseCamera):
 
     @staticmethod
     def frames():
+        # https://docs.opencv.org/3.4/d4/d15/group__videoio__flags__base.html
         camera = cv2.VideoCapture(Camera.video_source)
+
+        # smaller video allows more FPS and is more stable
+        # TODO: work on shrinking frame size
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 160)
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 120)
+
         if not camera.isOpened():
             raise RuntimeError('Could not start camera.')
 
