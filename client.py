@@ -3,7 +3,7 @@
 # a python socketio client
 # https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
 import socketio
-import time, os
+import time, os, io
 from importlib import import_module
 
 # import camera driver
@@ -61,6 +61,7 @@ def gen(camera):
         frame = camera.get_frame()
         print("sending frame")
         try:
+            #sio.emit("video_source", BytesIO(frame).getvalue(), namespace='/video')
             sio.emit("video_source", frame, namespace='/video')
         except:
             print("server is busy...trying again")
