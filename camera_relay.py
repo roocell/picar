@@ -22,4 +22,3 @@ class Camera(BaseCamera):
                 yield Camera.imgs[int(time.time()) % 3]
             else:
                 yield Camera.stream
-            #yield Camera.get(self)
