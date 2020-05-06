@@ -77,8 +77,8 @@ def gen(camera):
             log.debug("sending frames")
             last_sec_log = time.time()
         ms = int(round((time.time()-last_tx) * 1000))
+        frame = camera.get_frame()
         if (ms >= 1000/fps):
-            frame = camera.get_frame()
             try:
                 # TODO: need a callback from server here.
                 # client is disconncting and there's no attempt
@@ -87,22 +87,31 @@ def gen(camera):
             except:
                 print("server is busy...trying again")
             last_tx = time.time()
+            # we should be able to go to sleep until roughly the next frame
+            # based on the FPS. would resolve 100% CPU
+            # actually not needed because get_frame() waits for an event (but still 40% CPU)
+            #time.sleep(950/fps/1000) # 100% CPU -> 50% CPU
+
     if (sio.connected == False):
         log.debug("stopped sending frames")
 
-print("entering main loop")
+#gen(Camera())
+
+log.debug("entering main loop")
 while 1:
     while sio.connected == False:
         try:
             print("connecting... ")
             sio.connect(URL, namespaces=['/heartbeat', '/video'])
+            camera_thread = threading.Thread(target=gen, args=(Camera(),))
         except:
             print("ERROR: connection refused: check your URL, server running, port forwarding, internet connection, etc")
         time.sleep(1)
 
-    # kick off camera frame generator loop
-    t = threading.Thread(target=gen, args=(Camera(),))
-    t.start()
+    # see if we need to start the camera thread
+    if (camera_thread.is_alive() == False):
+        log.debug('kicking off camera thread')
+        camera_thread.start()
 
     if (sio.connected == True):
         print("ML: sending hb_from_client")
