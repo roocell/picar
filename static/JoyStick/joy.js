@@ -104,35 +104,20 @@ var JoyStick = (function(container, parameters) {
 	var movedX=centerX;
 	var movedY=centerY;
 
-  // throttled handler so movement doesn't trigger
-  // lots of events
-  function throttled(delay, fn) {
-    let lastCall = 0;
-    return function (...args) {
-      const now = (new Date).getTime();
-      if (now - lastCall < delay) {
-        return;
-      }
-      lastCall = now;
-      return fn(...args);
-    }
-  }
-  const tMMHandler = throttled(200, onMouseMove);
-  const tTCHHandler = throttled(200, onTouchMove);
 
   // Check if the device support the touch or not
 	if("ontouchstart" in document.documentElement)
 	{
 		canvas.addEventListener('touchstart', onTouchStart, false);
-		canvas.addEventListener('touchmove', tTCHHandler, false);
+		canvas.addEventListener('touchmove', onTouchMove, false);
 		canvas.addEventListener('touchend', onTouchEnd, false);
 	}
 	else
 	{
 		canvas.addEventListener('mousedown', onMouseDown, false);
-
-		canvas.addEventListener('mousemove', tMMHandler, false);
+		canvas.addEventListener('mousemove', onMouseMove, false);
 		canvas.addEventListener('mouseup', onMouseUp, false);
+    canvas.addEventListener('mouseout', onMouseOut, false);
 	}
 	// Draw the object
 	drawExternal();
@@ -243,6 +228,22 @@ var JoyStick = (function(container, parameters) {
 	{
 		pressed=1;
 	}
+
+  // throttled handler so movement doesn't trigger
+  // lots of events
+  function throttled(delay, fn) {
+    let lastCall = 0;
+    return function (...args) {
+      const now = (new Date).getTime();
+      if (now - lastCall < delay) {
+        return;
+      }
+      lastCall = now;
+      return fn(...args);
+    }
+  }
+  const tHandler = throttled(200, movementCallback);
+
 	function onMouseMove(event)
 	{
 		if(pressed==1)
@@ -264,7 +265,7 @@ var JoyStick = (function(container, parameters) {
       // every mouse move indicates a change
       // we need to notify
       // values passed will be in HTML
-      if (movementCallback != nil) movementCallback();
+      if (movementCallback != nil) tHandler();
 
       // TODO: this gets triggered on every move
       // will trigger many events
@@ -322,6 +323,11 @@ var JoyStick = (function(container, parameters) {
 		drawInternal();
 		//canvas.unbind('mousemove');
 	}
+
+  function onMouseOut(event)
+  {
+    onMouseUp();
+  }
 	/******************************************************
 	 * Public methods
 	 *****************************************************/

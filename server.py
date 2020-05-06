@@ -47,9 +47,11 @@ socketio = SocketIO(app)
 # movement routes
 # these send % values to client.py via socketio
 def movement_cb(data):
-    log.debug("movement_cb: " + data)
+    #log.debug("movement_cb: " + data)
+    pass
 def neautral_cb(data):
-    log.debug("movement_cb: " + data)
+    #log.debug("neautral_cb: " + data)
+    pass
 @app.route('/movement/')
 def movement():
     x = request.args.get('x')
@@ -95,6 +97,7 @@ def video_source(message):
     if (sec > 1):
         log.debug("rx video frame")
         last_rx_frame_log = time.time()
+    socketio.sleep(0) # helps prevent webpage from freezing at start ?
     relayCam.set(message)
     return "OK"
 
