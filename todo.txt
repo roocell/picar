@@ -1,0 +1,12 @@
+- controls on webpage to adjust fps, resolution, jpg quality
+  * would have to send a message to the raspi over socketio and adjust on the fly
+- automatically adjust fps, resolution, jpg quality based on connection
+- LEDs on front of car
+- speaker for sounds
+  * several options of sounds to play w/ web control
+- streaming voice out / mic in
+- picamera 2-axis
+- touch control (joy.js)
+- preprogrammed route
+- test cellphone tether
+- pi to read car battery and report
