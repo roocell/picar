@@ -36,6 +36,8 @@ class Camera(BaseCamera):
         # this has an impact on CPU!
         camera.set(cv2.CAP_PROP_FPS, Camera.fps)
 
+        # helps significantly with frame size
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 20]
 
         if not camera.isOpened():
             raise RuntimeError('Could not start camera.')
@@ -45,4 +47,4 @@ class Camera(BaseCamera):
             _, img = camera.read()
 
             # encode as a jpeg image and return it
-            yield cv2.imencode('.jpg', img)[1].tobytes()
+            yield cv2.imencode('.jpg', img, encode_param)[1].tobytes()
