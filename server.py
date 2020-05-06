@@ -144,7 +144,11 @@ def test_disconnect():
 # main
 if __name__ == '__main__':
     print("starting socketio")
-    socketio.run(app, certfile='cert.pem', keyfile='key.pem', debug=False, host='0.0.0.0')
+
+    socketio.run(app, certfile='/etc/letsencrypt/live/roocell.com/fullchain.pem',
+                    keyfile='/etc/letsencrypt/live/roocell.com/privkey.pem',
+                    debug=False, host='0.0.0.0')
+    #socketio.run(app, certfile='cert.pem', keyfile='key.pem', debug=False, host='0.0.0.0')
     #socketio.run(app, ssl_context='adhoc', debug=False, host='0.0.0.0') // ssl_conext arg DNE for socketio
     #socketio.run(app, log_output=False, debug=True, host='0.0.0.0')
     #socketio.run(app, debug=False, host='0.0.0.0')
