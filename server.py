@@ -12,18 +12,20 @@ import json
 import os, time
 import apikeys
 import logging
+import snap
 from flask_socketio import SocketIO, emit
 
 # to overcome error
 # ValueError: Too many packets in payload
-# (can probably implement a fps limiter as well)
+# (can probably implement a fps limiter on client side as well)
 from engineio.payload import Payload
 Payload.max_decode_packets = 100
-
 
 from camera_relay import Camera
 relayCam = Camera()
 
+webcam_w = 320
+webcam_h = 240
 
 # create logger
 log = logging.getLogger('server.py')
@@ -40,41 +42,62 @@ app.config['SECRET_KEY'] = 'secret!'
 app.threading = True
 socketio = SocketIO(app)
 
-@app.route('/')
-def index():
-    return """<html>
-              <head>
-                <title>picar streaming video</title>
-              </head>
-              <body>
-                <img src="http://www.roocell.com:5000/video_feed">
-              </body>
-            </html>"""
 
-@socketio.on('connect', namespace='/heartbeat')
-def m_heartbeat():
-    print("======================================")
-    print("client connected")
-    #print("tx server HEARBEAT")
-    socketio.emit('hb_from_server', {'data': 'OK'}, callback=m_hb_cb)
-
-# incoming
-@socketio.on("hb_from_client", namespace='/heartbeat')
-def hb_from_client(message):
-    print("======================================")
-    print("rx client HEARBEAT")
-    print(message)
+#=============================================================
+# movement routes
+# these send % values to client.py via socketio
+def movement_cb(data):
+    #log.debug("movement_cb: " + data)
+    pass
+def neautral_cb(data):
+    #log.debug("neautral_cb: " + data)
+    pass
+@app.route('/movement/')
+def movement():
+    x = request.args.get('x')
+    y = request.args.get('y')
+    log.debug("movement x=" + str(x) + " y=" + str(y))
+    socketio.emit('movement', {'x': x, 'y':y}, callback=movement_cb)
+    return "OK"
+@app.route('/neutral')
+def neutral():
+    log.debug('in neutral')
+    socketio.emit('neutral', {'x': 0, 'y':0}, callback=neautral_cb)
     return "OK"
 
-def m_hb_cb(data):
-    print("m_hb_cb: " + data)
+#=============================================================
+# index routes
+@app.route('/')
+def index():
+    top = """<!DOCTYPE HTML>
+    <html>
+        <head>
+            <title>Pi Car</title>
+            <meta charset="utf-8">
+            <meta name="description" content="Raspberry Pi control RC car.">
+            <meta name="author" content="Michael Russell">
+            <meta name="viewport" content="initial-scale=1.0">
+            <link rel="shortcut icon" type="image/png" href="static/raspi.png">
+            </head><body> """
+    bottom =  "</body></html>"
+    return top + \
+           render_template('index.html', key = apikeys.google_map_api,
+                              # need a little more to get rid of the scrollbars
+                               webcam_w=str(webcam_w+20)+"px", webcam_h=str(webcam_h+20)+"px") + \
+           bottom
+           #render_template('snap.html', innerHTML=snap.innerHTML()) + \
 
+#=============================================================
+# Video
+last_rx_frame_log = 0
 @socketio.on("video_source", namespace='/video')
 def video_source(message):
-    #print("=======================")
-    log.debug("rx video frame")
-    #print(message)
-    # push this frame to the video destination client
+    global last_rx_frame_log
+    sec = int(round((time.time()-last_rx_frame_log)))
+    if (sec > 1):
+        log.debug("rx video frame")
+        last_rx_frame_log = time.time()
+    socketio.sleep(0) # helps prevent webpage from freezing at start ?
     relayCam.set(message)
     return "OK"
 
@@ -96,13 +119,32 @@ def video_feed():
     return Response(gen(relayCam),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
-
+#===========================================================
+# heartbeat
+@socketio.on("hb_from_client", namespace='/heartbeat')
+def hb_from_client(message):
+    print("======================================")
+    print("rx client HEARBEAT")
+    print(message)
+    return "OK"
+def m_hb_cb(data):
+    print("m_hb_cb: " + data)
+@socketio.on('connect', namespace='/heartbeat')
+def m_heartbeat():
+    print("======================================")
+    print("client connected")
+    #print("tx server HEARBEAT")
+    socketio.emit('hb_from_server', {'data': 'OK'}, callback=m_hb_cb)
 @socketio.on('disconnect', namespace='/heartbeat')
 def test_disconnect():
     print('Client disconnected')
 
+
+#=====================================================
+# main
 if __name__ == '__main__':
     print("starting socketio")
-    #socketio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0')
+    socketio.run(app, certfile='cert.pem', keyfile='key.pem', debug=False, host='0.0.0.0')
+    #socketio.run(app, ssl_context='adhoc', debug=False, host='0.0.0.0') // ssl_conext arg DNE for socketio
     #socketio.run(app, log_output=False, debug=True, host='0.0.0.0')
-    socketio.run(app, debug=False, host='0.0.0.0')
+    #socketio.run(app, debug=False, host='0.0.0.0')

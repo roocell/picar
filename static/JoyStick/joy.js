@@ -63,6 +63,7 @@ var JoyStick = (function(container, parameters) {
 		autoReturnToCenter = (undefined === parameters.autoReturnToCenter ? true : parameters.autoReturnToCenter),
     vertical =  (undefined === parameters.vertical ? false : parameters.vertical),
     horizontal =  (undefined === parameters.horizontal ? false : parameters.horizontal),
+    movementCallback =  (undefined === parameters.movementCallback ? nil : parameters.movementCallback),
     upCallback =  (undefined === parameters.upCallback ? nil : parameters.upCallback),
     downCallback =  (undefined === parameters.downCallback ? nil : parameters.downCallback),
     leftCallback =  (undefined === parameters.leftCallback ? nil : parameters.leftCallback),
@@ -103,7 +104,8 @@ var JoyStick = (function(container, parameters) {
 	var movedX=centerX;
 	var movedY=centerY;
 
-	// Check if the device support the touch or not
+
+  // Check if the device support the touch or not
 	if("ontouchstart" in document.documentElement)
 	{
 		canvas.addEventListener('touchstart', onTouchStart, false);
@@ -115,6 +117,7 @@ var JoyStick = (function(container, parameters) {
 		canvas.addEventListener('mousedown', onMouseDown, false);
 		canvas.addEventListener('mousemove', onMouseMove, false);
 		canvas.addEventListener('mouseup', onMouseUp, false);
+    canvas.addEventListener('mouseout', onMouseOut, false);
 	}
 	// Draw the object
 	drawExternal();
@@ -225,6 +228,22 @@ var JoyStick = (function(container, parameters) {
 	{
 		pressed=1;
 	}
+
+  // throttled handler so movement doesn't trigger
+  // lots of events
+  function throttled(delay, fn) {
+    let lastCall = 0;
+    return function (...args) {
+      const now = (new Date).getTime();
+      if (now - lastCall < delay) {
+        return;
+      }
+      lastCall = now;
+      return fn(...args);
+    }
+  }
+  const tHandler = throttled(200, movementCallback);
+
 	function onMouseMove(event)
 	{
 		if(pressed==1)
@@ -242,6 +261,11 @@ var JoyStick = (function(container, parameters) {
 			// Redraw object
 			drawExternal();
 			drawInternal();
+
+      // every mouse move indicates a change
+      // we need to notify
+      // values passed will be in HTML
+      if (movementCallback != nil) tHandler();
 
       // TODO: this gets triggered on every move
       // will trigger many events
@@ -299,6 +323,11 @@ var JoyStick = (function(container, parameters) {
 		drawInternal();
 		//canvas.unbind('mousemove');
 	}
+
+  function onMouseOut(event)
+  {
+    onMouseUp();
+  }
 	/******************************************************
 	 * Public methods
 	 *****************************************************/
