@@ -3,10 +3,10 @@
 # a python socketio client
 # https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
 import socketio
-import time, os, io, datetime
+import time, os, io, datetime, sys
 from importlib import import_module
 import logging
-import threading
+from threading import Thread
 
 # to suppress InsecureRequestWarning when using https
 import urllib3
@@ -14,7 +14,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 os.environ['CAMERA'] = "opencv"
 os.environ['OPENCV_CAMERA_SOURCE'] = "0"
-fps = 30
+os.environ['FPS'] = "60"
+fps = int(os.environ['FPS'])
 URL = "https://www.roocell.com:5000"
 hb_time = 0
 
@@ -35,10 +36,14 @@ log.addHandler(ch)
 
 sio = socketio.Client(engineio_logger=False, logger=False, ssl_verify=False)
 
+camera_thread = None
+
 @sio.event
 def connect():
+    global camera_thread
     print('connection established')
     print('my sid is', sio.sid)
+    camera_thread = Thread(target=gen, args=(Camera(),))
 @sio.event
 def connect_error():
     print("The connection failed!")
@@ -68,6 +73,7 @@ def hb_response(data):
     print("server returned " + str(data) + " (rt=" + str(milliseconds) +"ms)")
 
 def gen(camera):
+    global fps
     last_tx = 0
     last_sec_log = 0
     while sio.connected:
@@ -78,6 +84,7 @@ def gen(camera):
             last_sec_log = time.time()
         ms = int(round((time.time()-last_tx) * 1000))
         frame = camera.get_frame()
+        #log.debug("Frame size " + str(sys.getsizeof(frame)))
         if (ms >= 1000/fps):
             try:
                 # TODO: need a callback from server here.
@@ -95,23 +102,22 @@ def gen(camera):
     if (sio.connected == False):
         log.debug("stopped sending frames")
 
-#gen(Camera())
-
 log.debug("entering main loop")
 while 1:
     while sio.connected == False:
         try:
             print("connecting... ")
             sio.connect(URL, namespaces=['/heartbeat', '/video'])
-            camera_thread = threading.Thread(target=gen, args=(Camera(),))
         except:
             print("ERROR: connection refused: check your URL, server running, port forwarding, internet connection, etc")
-        time.sleep(1)
+        time.sleep(3) # wait a few seconds for the connection to establish
 
     # see if we need to start the camera thread
-    if (camera_thread.is_alive() == False):
-        log.debug('kicking off camera thread')
-        camera_thread.start()
+    print(isinstance(camera_thread, Thread))
+    if (isinstance(camera_thread, Thread)):
+        if (camera_thread.is_alive() == False):
+            log.debug('kicking off camera thread')
+            camera_thread.start()
 
     if (sio.connected == True):
         print("ML: sending hb_from_client")
