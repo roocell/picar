@@ -11,10 +11,29 @@ from flask import Response
 import json
 import os, time
 import apikeys
+import logging
 from flask_socketio import SocketIO, emit
+
+# to overcome error
+# ValueError: Too many packets in payload
+# (can probably implement a fps limiter as well)
+from engineio.payload import Payload
+Payload.max_decode_packets = 100
+
 
 from camera_relay import Camera
 relayCam = Camera()
+
+
+# create logger
+log = logging.getLogger('server.py')
+log.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+log.addHandler(ch)
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -50,19 +69,10 @@ def hb_from_client(message):
 def m_hb_cb(data):
     print("m_hb_cb: " + data)
 
-
-def getFrame():
-    global frame
-    return frame
-
-def setFrame(f):
-    global frame
-    frame = f
-
 @socketio.on("video_source", namespace='/video')
 def video_source(message):
-    print("=======================")
-    print("rx video frame")
+    #print("=======================")
+    log.debug("rx video frame")
     #print(message)
     # push this frame to the video destination client
     relayCam.set(message)
@@ -94,4 +104,5 @@ def test_disconnect():
 if __name__ == '__main__':
     print("starting socketio")
     #socketio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0')
-    socketio.run(app, debug=True, host='0.0.0.0')
+    #socketio.run(app, log_output=False, debug=True, host='0.0.0.0')
+    socketio.run(app, debug=False, host='0.0.0.0')
