@@ -1,5 +1,6 @@
 - controls on webpage to adjust fps, resolution, jpg quality
   * would have to send a message to the raspi over socketio and adjust on the fly
+  * resolution adjusted by dragging the camera window
 - automatically adjust fps, resolution, jpg quality based on connection
 - LEDs on front of car
 - speaker for sounds
@@ -10,3 +11,8 @@
 - preprogrammed route
 - test cellphone tether
 - pi to read car battery and report
+- computer vision
+- server to display message if it stops receiving frames from client
+
+- hardware switch on raspi to switch wifi from cellphone tether to roocell
+- VR app to drive the car as well!
