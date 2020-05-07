@@ -49,8 +49,8 @@ window.onload = function() {
     var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
 
     // callback for when server emits "location update"
-    socket.on('location updated', function(msg) {
-      console.log("received location updated event")
+    socket.on('location_updated', function(msg) {
+      console.log("received location updated event from flask")
       console.log(msg); // Print the greeting as text
       var latlng = new google.maps.LatLng(msg.latitude,msg.longitude);
       picar_marker.setPosition(latlng)
@@ -86,7 +86,11 @@ window.onload = function() {
         iphone_marker.setPosition(latlng);
 
         // send location to server
-        socket.emit('new location', {data: JSON.stringify(cloneAsObject(position.coords))});
+        console.log("sending update_location")
+        socket.emit('update_location', {data: JSON.stringify(cloneAsObject(position.coords))},
+                      function(resp) {
+                        console.log("server resp: " + resp);
+                      });
 
     });
 
@@ -106,34 +110,32 @@ window.onload = function() {
 </script>
 
 
-<script>
-    // prevent iphone from going to sleep
-    var noSleep = new NoSleep();
-
-    var wakeLockEnabled = false;
-    var toggleEl = document.getElementById("toggle");
-    toggleEl.addEventListener('click', function() {
-      if (!wakeLockEnabled) {
-        noSleep.enable(); // keep the screen on!
-        wakeLockEnabled = true;
-        toggleEl.value = "Wake Lock is enabled";
-        document.body.style.backgroundColor = "green";
-      } else {
-        noSleep.disable(); // let the screen turn off.
-        wakeLockEnabled = false;
-        toggleEl.value = "Wake Lock is disabled";
-        document.body.style.backgroundColor = "";
-      }
-    }, false);
-  </script>
-
-
 <body>
 
 <p id="location"></p>
 <input type="button" id="toggle" value="Wake Lock is disabled" />
 <div id="map"></div>
 
+<script>
+    // prevent iphone from going to sleep
+    var noSleep = new NoSleep();
+
+    var wakeLockEnabled = false;
+    var toggle = document.getElementById("toggle");
+    toggle.addEventListener('click', function() {
+      if (!wakeLockEnabled) {
+        noSleep.enable(); // keep the screen on!
+        wakeLockEnabled = true;
+        toggle.value = "Wake Lock is enabled";
+        document.body.style.backgroundColor = "green";
+      } else {
+        noSleep.disable(); // let the screen turn off.
+        wakeLockEnabled = false;
+        toggle.value = "Wake Lock is disabled";
+        document.body.style.backgroundColor = "";
+      }
+    }, false);
+  </script>
 
 
 <script src="https://maps.googleapis.com/maps/api/js?key={{key}}&callback=initMap" async defer></script>
