@@ -59,7 +59,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 # incoming
-@socketio.on('new location', namespace='/updatelocation')
+@socketio.on('update_location', namespace='/updatelocation')
 def updatelocationIO(message):
     print("======================================")
     print("client updated location via SOCKET")
@@ -72,7 +72,7 @@ def updatelocationIO(message):
     picarDb.longitude = data['longitude']
     db.session.commit()
     loc = {"latitude":picarDb.latitude, "longitude":picarDb.longitude}
-    emit('location updated', loc, broadcast=True)
+    emit('location_updated', loc, broadcast=True)
 
 # outgoing
 @socketio.on('connect', namespace='/updatelocation')

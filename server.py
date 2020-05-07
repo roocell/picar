@@ -86,6 +86,20 @@ def index():
                                webcam_w=str(webcam_w+20)+"px", webcam_h=str(webcam_h+20)+"px") + \
            bottom
            #render_template('snap.html', innerHTML=snap.innerHTML()) + \
+#=============================================================
+# location
+@socketio.on("location_updated", namespace='/serverupdatelocation')
+def location_updated(message):
+    log.debug("location_updated")
+    log.debug(message)
+    #data = json.loads(message['data'])
+    loc = {"latitude":message['latitude'], "longitude":message['longitude']}
+
+    # emit to web client
+    # TODO: something wrong here if web client is connected
+    #   sometimes works, sometimes doens't (on server restart)
+    socketio.emit('server_location_updated', loc, namespace='/serverupdatelocation', broadcast=True)
+    return "OK"
 
 #=============================================================
 # Video

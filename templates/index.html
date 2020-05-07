@@ -57,30 +57,30 @@ body
 
 			// socket IO client side
       window.onload = function() {
-			  // var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
-		    // socket.on('location updated', function(json) {
-				// 	  console.log("received picar location update");
-				// 		console.log(json)
-				// 		var locdiv = document.getElementById('location');
-				// 	  locdiv.innerHTML = JSON.stringify(json);
-				// 		var latlng = new google.maps.LatLng(json.latitude, json.longitude);
-				// 		picar_marker.setPosition(latlng);
-				//
-				// 		// flash coordinates for a second
- 				// 		locdiv.style = "background-color: yellow;"
-				// 		setTimeout(function() {
-				// 						// TODO: a new location may arrive and this timer could kill it
-				// 		        locdiv.style="background-color: none;";
-				// 		      }, 1000 );
-				//
-				// 		// have map follow Car
-				// 		map.setCenter(latlng);
-				//
-				// 		// TODO:
-				// 		// zoom out map depending on delta between controller and picar
-				//
-				//
-				// }); // end socket.on
+			  var socket = io.connect('https://' + document.domain + ':' + location.port + '/serverupdatelocation');
+		    socket.on('server_location_updated', function(json) {
+					  console.log("received picar location update");
+						console.log(json)
+						var locdiv = document.getElementById('location');
+					  locdiv.innerHTML = JSON.stringify(json);
+						var latlng = new google.maps.LatLng(json.latitude, json.longitude);
+						picar_marker.setPosition(latlng);
+
+						// flash coordinates for a second
+ 						locdiv.style = "background-color: yellow;"
+						setTimeout(function() {
+										// TODO: a new location may arrive and this timer could kill it
+						        locdiv.style="background-color: none;";
+						      }, 1000 );
+
+						// have map follow Car
+						map.setCenter(latlng);
+
+						// TODO:
+						// zoom out map depending on delta between controller and picar
+
+
+				}); // end socket.on
 
 				if (navigator.geolocation) {
 					var iphone_icon = {
