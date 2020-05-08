@@ -33,7 +33,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 os.environ['CAMERA'] = "opencv"
 os.environ['OPENCV_CAMERA_SOURCE'] = "0"
-os.environ['FPS'] = "1"
+os.environ['FPS'] = "60"
 fps = int(os.environ['FPS'])
 URL = "https://www.roocell.com:5000"
 
@@ -56,66 +56,32 @@ sio = socketio.Client(engineio_logger=False, logger=False, ssl_verify=False)
 
 # instantiate app and flask socketio
 #=============================================================
-# variables that are accessible from anywhere
-commonDataStruct = {}
-# lock to control access to variable
-dataLock = threading.Lock()
-# thread handler
-yourThread = threading.Thread()
-POOL_TIME = 5 #Seconds
-def create_app():
-    app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'secret!'
-
-    def interrupt():
-        global yourThread
-        yourThread.cancel()
-
-    def doStuff():
-        global commonDataStruct
-        global yourThread
-        with dataLock:
-            # Do your stuff with commonDataStruct Here
-
-            main_loop(False)
-
-            # Set the next thread to happen
-            yourThread = threading.Timer(POOL_TIME, doStuff, ())
-            yourThread.start()
-
-    def doStuffStart():
-        # Do initialisation stuff here
-        global yourThread
-        # Create your thread
-        yourThread = threading.Timer(POOL_TIME, doStuff, ())
-        yourThread.start()
-
-    # Initiate
-    doStuffStart()
-    # When you kill Flask (SIGTERM), clear the trigger for the next thread
-    atexit.register(interrupt)
-    return app
-
-app = create_app()
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
 fsio = flask_socketio.SocketIO(app)
 
 #=============================================================
 # location routes w/ socketio
+LOC_FILE = "loc.file"
 @app.route('/location')
 def location():
     return render_template('location.html', key = apikeys.google_map_api)
 @fsio.on('update_location', namespace='/updatelocation')
 def updatelocation(message):
     print("======================================")
-    print("location received, forwarding to server")
+    print("location received")
     # TODO: json.loads doesnt' get all the decimal places.
     data = json.loads(message['data'])
     print(data)
     loc = {"latitude":data['latitude'], "longitude":data['longitude']}
     # emit back to web client so it can update location on it's page
     fsio.emit('location_updated', loc, namespace="/updatelocation")
-    # relay location to server
-    sio.emit('location_updated', message, namespace="/serverupdatelocation")
+
+    # relay location to server (I'm such a hack)
+    f = open(LOC_FILE, "w")
+    f.write(json.dumps(message))
+    f.close()
+    #sio.emit('location_updated', message, namespace="/serverupdatelocation")
     return "OK"
 
 @fsio.on('connect', namespace='/updatelocation')
@@ -141,11 +107,6 @@ def disconnect():
     print('disconnected from server')
 
 @sio.event
-def hb_from_server(data):
-    log.debug('hb_from_server with ', data)
-    sio.emit('my response', {'response': 'my response'})
-    return "OK"
-@sio.event
 def movement(data):
     log.debug(data)
     # call python to adjust PWM
@@ -161,10 +122,14 @@ def hb_response(data):
     milliseconds = int(round((time.time()-hb_time) * 1000))
     log.debug("server returned " + str(data) + " (rt=" + str(milliseconds) +"ms)")
 
+hb_time = 0
 def gen(camera):
+    global hb_time
     global fps
     last_tx = 0
     last_sec_log = 0
+    last_hb = 0
+    last_loc_mod_time = 0
     while sio.connected:
         sec = int(round((time.time()-last_sec_log)))
         # print a log every second
@@ -180,24 +145,48 @@ def gen(camera):
                 # client is disconncting and there's no attempt
                 # to reconnect.
                 sio.emit("video_source", frame, namespace='/video')
+                pass
             except:
                 print("server is busy...trying again")
             last_tx = time.time()
-            # we should be able to go to sleep until roughly the next frame
-            # based on the FPS. would resolve 100% CPU
-            # actually not needed because get_frame() waits for an event (but still 40% CPU)
-            #time.sleep(950/fps/1000) # 100% CPU -> 50% CPU
+        # we should be able to go to sleep until roughly the next frame
+        # based on the FPS. would resolve 100% CPU
+        # actually not needed because get_frame() waits for an event (but still 40% CPU)
+        #time.sleep(950/fps/1000) # 100% CPU -> 50% CPU
+
+
+        # sending of the frame is interrupting any other messages
+        # the only way i could figure out how to overcome this is
+        # to send everything else to the server from the thread.
+        # so any ayncronous things from flask routes (for example)
+        # will have to set a global, then sent here
+        # no idea how this is going to handle multiple cameras.... :(
+        hb = int(round((time.time()-last_hb)))
+        if (sio.connected == True and hb >= 10):
+            hb_time = time.time()
+            log.debug("ML: sending hb_from_client " + str(hb_time))
+            sio.emit("hb_from_client", {'hb_time' : str(hb_time)}, namespace='/heartbeat', callback=hb_response)
+            last_hb = time.time()
+
+        if (os.path.exists(LOC_FILE)):
+            modtime = os.path.getmtime(LOC_FILE)
+        else:
+            modtime = 0
+        if (modtime > last_loc_mod_time):
+            f = open(LOC_FILE, "r")
+            message = f.read()
+            log.debug("forwarding loc to server")
+            sio.emit('location_updated', message, namespace="/serverupdatelocation")
+            last_loc_mod_time = modtime
+
+
 
     if (sio.connected == False):
         log.debug("stopped sending frames")
 
-
-
 #=======================================================
 # main loop
-hb_time = 0
 def main_loop(arg):
-    global hb_time
     global sio
     global camera_thread
     log.debug("entering main loop")
@@ -216,13 +205,10 @@ def main_loop(arg):
                 log.debug('kicking off camera thread')
                 camera_thread.start()
 
-        if (sio.connected == True):
-            hb_time = time.time()
-            log.debug("ML: sending hb_from_client " + str(hb_time))
-            sio.emit("hb_from_client", {'hb_time' : str(hb_time)}, namespace='/heartbeat', callback=hb_response)
-            time.sleep(10) # this time is not accurate!
         time.sleep(1)
 # end of main_loop
+
+
 
 
 #=====================================================
@@ -234,8 +220,8 @@ if __name__ == '__main__':
     atexit.register(cleanup)
 
     # kick off main loop as a thread - because we're a flask app
-    #ml = Thread(target=main_loop, args=(False,))
-    #ml.start()
+    ml = Thread(target=main_loop, args=(False,))
+    ml.start()
 
     # need to use self-signed certs because we don't have a domain
     fsio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0')
