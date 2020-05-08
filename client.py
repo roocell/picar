@@ -68,11 +68,11 @@ def location():
     return render_template('location.html', key = apikeys.google_map_api)
 @fsio.on('update_location', namespace='/updatelocation')
 def updatelocation(message):
-    print("======================================")
-    print("location received")
+    log.debug("======================================")
+    log.debug("location received")
     # TODO: json.loads doesnt' get all the decimal places.
     data = json.loads(message['data'])
-    print(data)
+    log.debug(data)
     loc = {"latitude":data['latitude'], "longitude":data['longitude']}
     # emit back to web client so it can update location on it's page
     fsio.emit('location_updated', loc, namespace="/updatelocation")
@@ -86,26 +86,11 @@ def updatelocation(message):
 
 @fsio.on('connect', namespace='/updatelocation')
 def connect():
-    print("flask client connected")
+    log.debug("flask client connected")
     return "OK"
 
-# ============================================
-# Camera events
-camera_thread = None
-@sio.event
-def connect():
-    global camera_thread
-    print('connection established')
-    print('my sid is', sio.sid)
-    camera_thread = Thread(target=gen, args=(Camera(),))
-
-@sio.event
-def connect_error():
-    print("The connection failed!")
-@sio.event
-def disconnect():
-    print('disconnected from server')
-
+#=================================================
+# MOTOR
 @sio.event
 def movement(data):
     log.debug(data)
@@ -113,47 +98,70 @@ def movement(data):
     return "OK"
 @sio.event
 def neutral(data):
+    log.debug("======NEUTRAL======")
     log.debug(data)
     # all stop!
     return "OK"
+
+#====================================================
+# CAMERA
+last_tx = 0
+last_sec_log = 0
+def processCamera(camera):
+    global last_tx
+    global last_sec_log
+    sec = int(round((time.time()-last_sec_log)))
+    # log.debug a log every second
+    if (sec > 1):
+        log.debug("sending frames")
+        last_sec_log = time.time()
+    ms = int(round((time.time()-last_tx) * 1000))
+    frame = camera.get_frame()
+    #log.debug("Frame size " + str(sys.getsizeof(frame)))
+    if (ms >= 1000/fps):
+        try:
+            # TODO: need a callback from server here.
+            # client is disconncting and there's no attempt
+            # to reconnect.
+            sio.emit("video_source", frame, namespace='/video')
+            pass
+        except:
+            log.debug("server is busy...trying again")
+        last_tx = time.time()
+
+# ============================================
+# SERVER CONNECTION / HEARTBEAT
+main_thread = None
+@sio.event
+def connect():
+    global main_thread
+    log.debug('connection established')
+    log.debug('my sid is' + sio.sid)
+    main_thread = Thread(target=main_loop, args=(Camera(),))
+
+@sio.event
+def connect_error():
+    log.debug("The connection failed!")
+@sio.event
+def disconnect():
+    log.debug('disconnected from server')
 
 def hb_response(data):
     global hb_time
     milliseconds = int(round((time.time()-hb_time) * 1000))
     log.debug("server returned " + str(data) + " (rt=" + str(milliseconds) +"ms)")
 
+#==========================================================
+# MAIN LOOP
 hb_time = 0
-def gen(camera):
+def main_loop(camera):
     global hb_time
     global fps
-    last_tx = 0
-    last_sec_log = 0
     last_hb = 0
     last_loc_mod_time = 0
+    log.debug("entering main loop")
     while sio.connected:
-        sec = int(round((time.time()-last_sec_log)))
-        # print a log every second
-        if (sec > 1):
-            log.debug("sending frames")
-            last_sec_log = time.time()
-        ms = int(round((time.time()-last_tx) * 1000))
-        frame = camera.get_frame()
-        #log.debug("Frame size " + str(sys.getsizeof(frame)))
-        if (ms >= 1000/fps):
-            try:
-                # TODO: need a callback from server here.
-                # client is disconncting and there's no attempt
-                # to reconnect.
-                sio.emit("video_source", frame, namespace='/video')
-                pass
-            except:
-                print("server is busy...trying again")
-            last_tx = time.time()
-        # we should be able to go to sleep until roughly the next frame
-        # based on the FPS. would resolve 100% CPU
-        # actually not needed because get_frame() waits for an event (but still 40% CPU)
-        #time.sleep(950/fps/1000) # 100% CPU -> 50% CPU
-
+        processCamera(camera)
 
         # sending of the frame is interrupting any other messages
         # the only way i could figure out how to overcome this is
@@ -183,45 +191,46 @@ def gen(camera):
 
     if (sio.connected == False):
         log.debug("stopped sending frames")
+# end of main_loop
 
 #=======================================================
-# main loop
-def main_loop(arg):
+# START LOOP
+def start_loop(arg):
     global sio
-    global camera_thread
-    log.debug("entering main loop")
+    global main_thread
+    log.debug("entering start loop")
     while 1:
         while sio.connected == False:
             try:
-                print("connecting... ")
+                log.debug("connecting... ")
                 sio.connect(URL, namespaces=['/heartbeat', '/video', '/serverupdatelocation'])
             except:
-                print("ERROR: connection refused: check your URL, server running, port forwarding, internet connection, etc")
+                log.debug("ERROR: connection refused: check your URL, server running, port forwarding, internet connection, etc")
             time.sleep(3) # wait a few seconds for the connection to establish
 
-        # see if we need to start the camera thread
-        if (isinstance(camera_thread, Thread)):
-            if (camera_thread.is_alive() == False):
-                log.debug('kicking off camera thread')
-                camera_thread.start()
+        # see if we need to start the main thread
+        if (isinstance(main_thread, Thread)):
+            if (main_thread.is_alive() == False):
+                log.debug('kicking off main thread')
+                main_thread.start()
 
         time.sleep(1)
-# end of main_loop
+# end of start_loop
 
 
 
 
 #=====================================================
 def cleanup():
-    print("cleaning up")
+    log.debug("cleaning up")
     #picar.destroy()
 
 if __name__ == '__main__':
     atexit.register(cleanup)
 
     # kick off main loop as a thread - because we're a flask app
-    ml = Thread(target=main_loop, args=(False,))
-    ml.start()
+    sl = Thread(target=start_loop, args=(False,))
+    sl.start()
 
     # need to use self-signed certs because we don't have a domain
     fsio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0')
