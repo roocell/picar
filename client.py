@@ -1,12 +1,20 @@
 #!/usr/local/bin python3
 
+# change threads to eventlet
+#import eventlet
+#eventlet.monkey_patch(socket=False)
+#from eventlet.green import threading
+import threading
+from threading import Thread
+
+
 # a python socketio client
 # https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
 import socketio
 import time, os, io, datetime, sys
 from importlib import import_module
 import logging
-from threading import Thread
+import atexit
 
 # we want to run a flask app here as well to serve up the location page
 # this app will get the location from a cellphone and then emit that info
@@ -47,8 +55,48 @@ log.addHandler(ch)
 sio = socketio.Client(engineio_logger=False, logger=False, ssl_verify=False)
 
 # instantiate app and flask socketio
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
+#=============================================================
+# variables that are accessible from anywhere
+commonDataStruct = {}
+# lock to control access to variable
+dataLock = threading.Lock()
+# thread handler
+yourThread = threading.Thread()
+POOL_TIME = 5 #Seconds
+def create_app():
+    app = Flask(__name__)
+    app.config['SECRET_KEY'] = 'secret!'
+
+    def interrupt():
+        global yourThread
+        yourThread.cancel()
+
+    def doStuff():
+        global commonDataStruct
+        global yourThread
+        with dataLock:
+            # Do your stuff with commonDataStruct Here
+
+            main_loop(False)
+
+            # Set the next thread to happen
+            yourThread = threading.Timer(POOL_TIME, doStuff, ())
+            yourThread.start()
+
+    def doStuffStart():
+        # Do initialisation stuff here
+        global yourThread
+        # Create your thread
+        yourThread = threading.Timer(POOL_TIME, doStuff, ())
+        yourThread.start()
+
+    # Initiate
+    doStuffStart()
+    # When you kill Flask (SIGTERM), clear the trigger for the next thread
+    atexit.register(interrupt)
+    return app
+
+app = create_app()
 fsio = flask_socketio.SocketIO(app)
 
 #=============================================================
@@ -67,7 +115,7 @@ def updatelocation(message):
     # emit back to web client so it can update location on it's page
     fsio.emit('location_updated', loc, namespace="/updatelocation")
     # relay location to server
-    sio.emit('location_updated', loc, namespace="/serverupdatelocation")
+    sio.emit('location_updated', message, namespace="/serverupdatelocation")
     return "OK"
 
 @fsio.on('connect', namespace='/updatelocation')
@@ -84,6 +132,7 @@ def connect():
     print('connection established')
     print('my sid is', sio.sid)
     camera_thread = Thread(target=gen, args=(Camera(),))
+
 @sio.event
 def connect_error():
     print("The connection failed!")
@@ -93,7 +142,7 @@ def disconnect():
 
 @sio.event
 def hb_from_server(data):
-    print('hb_from_server with ', data)
+    log.debug('hb_from_server with ', data)
     sio.emit('my response', {'response': 'my response'})
     return "OK"
 @sio.event
@@ -110,7 +159,7 @@ def neutral(data):
 def hb_response(data):
     global hb_time
     milliseconds = int(round((time.time()-hb_time) * 1000))
-    print("server returned " + str(data) + " (rt=" + str(milliseconds) +"ms)")
+    log.debug("server returned " + str(data) + " (rt=" + str(milliseconds) +"ms)")
 
 def gen(camera):
     global fps
@@ -168,10 +217,11 @@ def main_loop(arg):
                 camera_thread.start()
 
         if (sio.connected == True):
-            print("ML: sending hb_from_client")
             hb_time = time.time()
-            sio.emit("hb_from_client", {'foo' : 'bar'}, namespace='/heartbeat', callback=hb_response)
-            time.sleep(10)
+            log.debug("ML: sending hb_from_client " + str(hb_time))
+            sio.emit("hb_from_client", {'hb_time' : str(hb_time)}, namespace='/heartbeat', callback=hb_response)
+            time.sleep(10) # this time is not accurate!
+        time.sleep(1)
 # end of main_loop
 
 
@@ -184,8 +234,11 @@ if __name__ == '__main__':
     atexit.register(cleanup)
 
     # kick off main loop as a thread - because we're a flask app
-    ml = Thread(target=main_loop, args=(False,))
-    ml.start()
+    #ml = Thread(target=main_loop, args=(False,))
+    #ml.start()
 
     # need to use self-signed certs because we don't have a domain
     fsio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0')
+
+    # bah! becomeCA.txt doesn't work either.
+    #fsio.run(app, certfile='picar.crt', keyfile='picar.key', debug=True, host='0.0.0.0')
