@@ -39,7 +39,6 @@ log.addHandler(ch)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-app.threading = True
 socketio = SocketIO(app)
 
 
@@ -91,13 +90,14 @@ def index():
 @socketio.on("location_updated", namespace='/serverupdatelocation')
 def location_updated(message):
     log.debug("location_updated")
-    log.debug(message)
-    #data = json.loads(message['data'])
-    loc = {"latitude":message['latitude'], "longitude":message['longitude']}
+    mdict = eval(message)
+    #log.debug(mdict)
+    data = json.loads(mdict["data"])
+    log.debug(data)
+    loc = {"latitude":data['latitude'], "longitude":data['longitude']}
 
     # emit to web client
-    # TODO: something wrong here if web client is connected
-    #   sometimes works, sometimes doens't (on server restart)
+    # TODO: sending of video frames is causing issues on reception of anything
     socketio.emit('server_location_updated', loc, namespace='/serverupdatelocation', broadcast=True)
     return "OK"
 
@@ -144,11 +144,10 @@ def hb_from_client(message):
 def m_hb_cb(data):
     print("m_hb_cb: " + data)
 @socketio.on('connect', namespace='/heartbeat')
-def m_heartbeat():
+def connet():
     print("======================================")
     print("client connected")
-    #print("tx server HEARBEAT")
-    socketio.emit('hb_from_server', {'data': 'OK'}, callback=m_hb_cb)
+    return "OK"
 @socketio.on('disconnect', namespace='/heartbeat')
 def test_disconnect():
     print('Client disconnected')
@@ -162,7 +161,3 @@ if __name__ == '__main__':
     socketio.run(app, certfile='/etc/letsencrypt/live/roocell.com/fullchain.pem',
                     keyfile='/etc/letsencrypt/live/roocell.com/privkey.pem',
                     debug=False, host='0.0.0.0')
-    #socketio.run(app, certfile='cert.pem', keyfile='key.pem', debug=False, host='0.0.0.0')
-    #socketio.run(app, ssl_context='adhoc', debug=False, host='0.0.0.0') // ssl_conext arg DNE for socketio
-    #socketio.run(app, log_output=False, debug=True, host='0.0.0.0')
-    #socketio.run(app, debug=False, host='0.0.0.0')
