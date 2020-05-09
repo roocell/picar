@@ -123,7 +123,7 @@ class PWM(object):
     def _debug_(self,message):
         if self._DEBUG:
             print(self._DEBUG_INFO,message)
-    
+
 
     def setup(self):
         '''Init the class with bus_number and address'''
@@ -137,6 +137,7 @@ class PWM(object):
         mode1 = mode1 & ~self._SLEEP
         self._write_byte_data(self._MODE1, mode1)
         time.sleep(0.005)
+        self._reflcock = 25000000.0
         self._frequency = 60
 
     def _write_byte_data(self, reg, value):
@@ -199,6 +200,14 @@ class PWM(object):
         raise IOError('IO error')
 
     @property
+    def refclock(self):
+        return self._refclock
+
+    @refclock.setter
+    def refclock(self, refclock):
+        self._refclock = refclock
+
+    @property
     def frequency(self):
         return self._frequency
 
@@ -207,7 +216,7 @@ class PWM(object):
         '''Set PWM frequency'''
         self._debug_('Set frequency to %d' % freq)
         self._frequency = freq
-        prescale_value = 25000000.0
+        prescale_value = self._refclock
         prescale_value /= 4096.0
         prescale_value /= float(freq)
         prescale_value -= 1.0
