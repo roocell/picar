@@ -1,80 +1,49 @@
 import time
-from SunFounder_PCA9685 import Servo
 from SunFounder_PCA9685 import PCA9685
-import RPi.GPIO as GPIO
 
-steering = Servo.Servo(0)
-steering.setup()
+# traxxas
+# steering and motor are both controlled via PWM
+# 100 Hz, 10ms cycle
+# Vpp = 3.44V  (so use 3V3)
 
-motor = PCA9685.PWM() # I2C address 0x40
-motor.frequency = 60
-motorchannel = 15 # channel 16 (last one)
+# idle is 14-15% duty cycle
+# forward/left is 20% duty cycle
+# reverse/right is 10% duty cycle
 
-# setup up GPIO to L293D for motor driver
-motorPin1 = 13 # GPIO27
-motorPin2 = 11 # GPIO17
+class Drive:
+    motorChannel = 11
+    steeringChannel = 4
 
-def setupMotor():
-    global motorPin1
-    global motorPin2
-    GPIO.setmode(GPIO.BOARD)      # use PHYSICAL GPIO Numbering
-    GPIO.setup(motorPin1,GPIO.OUT)   # set pins to OUTPUT mode
-    GPIO.setup(motorPin2,GPIO.OUT)
+    def __init__(self, name):
+        self.name = name
+        self.pwm = PCA9685.PWM() # I2C address 0x40
+        self.pwm.frequency = 100
 
-def direction(value):
-    global motorPin1
-    global motorPin2
-    # this is because we're using L293D
-    # on the real picar all we will control is the PWM
-    # does that mean we can't go backwards?
-    if (value > 0):
-        # forward
-        GPIO.output(motorPin1,GPIO.HIGH)
-        GPIO.output(motorPin2,GPIO.LOW)
-    elif (value < 0):
-        # backward
-        GPIO.output(motorPin1,GPIO.LOW)
-        GPIO.output(motorPin2,GPIO.HIGH)
-    else:
-        # stop
-        GPIO.output(motorPin1,GPIO.LOW)
-        GPIO.output(motorPin2,GPIO.LOW)
-
-
-def loop():
-    while True:
-            # rotate servo 180 degrees and back
-            # in 5 degree steps
-            for i in range(0, 180, 5):
-                    steering.write(i)
-                    time.sleep(0.1)
-            for i in range(180, 0, -5):
-                    steering.write(i)
-                    time.sleep(0.1)
-
-            steering.write(0)
-
-            # ramp motor up and down
+    # tested with LEDs first
+    def testloop(self):
+        print(self.name)
+        while True:
+            # ramp up and down
             # can also be tested with LED
-            direction(1)
             for i in range(0, 4095, 10):
-                    motor.write(motorchannel, 0, i)
-                    time.sleep(0.0001)
-            direction(-1)
+                    self.pwm.write(self.motorChannel, 0, i)
+                    self.pwm.write(self.steeringChannel, 0, i)
+                    time.sleep(0.001)
             for i in range(4095, -1, -10):
-                    motor.write(motorchannel, 0, i)
-                    time.sleep(0.0001)
-            direction(0)
+                    self.pwm.write(self.motorChannel, 0, i)
+                    self.pwm.write(self.steeringChannel, 0, i)
+                    time.sleep(0.001)
+    def cleanup(self):
+        self.pwm.write(self.motorChannel, 0, 0)
+        self.pwm.write(self.steeringChannel, 0, 0)
+
 
 def destroy():
-    global steering
-    GPIO.cleanup()                    # Release GPIO resource
-    steering.write(0)
-
+    drive.cleanup()
 
 if __name__ == '__main__':     # Program entrance
-    setupMotor()
+    drive = Drive("traxxas")
     try:
-        loop()
+        drive.testloop()
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
         destroy()
