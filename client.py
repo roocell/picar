@@ -26,6 +26,9 @@ import flask_socketio
 
 # things needed to control raspi I/O
 import atexit
+import drive
+
+drive = drive.Drive("traxxas")
 
 # to suppress InsecureRequestWarning when using https
 import urllib3
@@ -93,7 +96,28 @@ def connect():
 # MOTOR
 @sio.event
 def movement(data):
+    log.debug("======MOVEMENT======")
     log.debug(data)
+    # +x = right
+    # -x = left
+    # +y = forward
+    # -y = reverse
+    # y==0 -> neutral
+    # x==0 -> straight
+    x = int(data['x']);
+    y = int(data['y']);
+    if (y > 0):
+        drive.forward(y)
+    elif (y < 0):
+        drive.reverse(y)
+    else:
+        drive.neutral()
+    if (x > 0):
+        drive.right(x*(-1)) # drive API is right (-)
+    elif (x < 0):
+        drive.left(x*(-1))
+    else:
+        drive.straight()
     # call python to adjust PWM
     return "OK"
 @sio.event
@@ -101,6 +125,8 @@ def neutral(data):
     log.debug("======NEUTRAL======")
     log.debug(data)
     # all stop!
+    drive.neutral()
+    drive.straight()
     return "OK"
 
 #====================================================
@@ -229,11 +255,14 @@ if __name__ == '__main__':
     atexit.register(cleanup)
 
     # kick off main loop as a thread - because we're a flask app
+    log.debug("creating start loop")
     sl = Thread(target=start_loop, args=(False,))
     sl.start()
 
     # need to use self-signed certs because we don't have a domain
-    fsio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0')
+    # use_reloader=False # to prevent __main__ from being called twice and having client
+    # connect to the server twice (was generating double socketio events)
+    fsio.run(app, certfile='cert.pem', keyfile='key.pem', debug=True, host='0.0.0.0', use_reloader=False)
 
     # bah! becomeCA.txt doesn't work either.
     #fsio.run(app, certfile='picar.crt', keyfile='picar.key', debug=True, host='0.0.0.0')

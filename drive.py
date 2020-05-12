@@ -57,19 +57,19 @@ class Drive:
         self.pwm.refclock = 26000000.0
         self.pwm.frequency = 100 # Hz
 
-    def forward(self, speedPercentage): # 0 .. 100
-        pwmval = self.idleMotorPwm + (self.maxForwardPwm - self.idleMotorPwm) * speedPercentage / 100
-        self.log.debug("forward %d -> %d (idlepwm = %d)", speedPercentage, pwmval, self.idleMotorPwm);
+    def forward(self, percentage): # 0 .. 100
+        pwmval = self.idleMotorPwm + (self.maxForwardPwm - self.idleMotorPwm) * percentage / 100
+        self.log.debug("forward %d -> %d (idlepwm = %d)", percentage, pwmval, self.idleMotorPwm);
         self.pwm.write(self.motorChannel, 0, int(pwmval))
-    def reverse(self, speedPercentage): # 0 .. -100
-        if (speedPercentage > 0):
-            log.error("reverse speedPercentage must be negative")
+    def reverse(self, percentage): # 0 .. -100
+        if (percentage > 0):
+            self.log.error("reverse percentage must be negative" + str(percentage))
             return "error"
-        pwmval = self.idleMotorPwm + (self.idleMotorPwm - self.maxReversePwm) * speedPercentage / 100
-        self.log.debug("reverse %d -> %d (idlepwm = %d)", speedPercentage, pwmval, self.idleMotorPwm);
+        pwmval = self.idleMotorPwm + (self.idleMotorPwm - self.maxReversePwm) * percentage / 100
+        self.log.debug("reverse %d -> %d (idlepwm = %d)", percentage, pwmval, self.idleMotorPwm);
         self.pwm.write(self.motorChannel, 0, int(pwmval))
-    def stop(self):
-        self.log.debug("stop")
+    def neutral(self):
+        self.log.debug("neutral")
         self.pwm.write(self.motorChannel, 0, int(self.idleMotorPwm))
 
     def left(self, percentage): # 0 .. 100
@@ -78,7 +78,7 @@ class Drive:
         self.pwm.write(self.steeringChannel, 0, int(pwmval))
     def right(self, percentage): # 0 .. -100
         if (percentage > 0):
-            log.error("reverse speedPercentage must be negative")
+            self.log.error("right percentage must be negative", str(percentage))
             return "error"
         pwmval = self.straightPwm + (self.straightPwm - self.maxRightPwm) * percentage / 100
         self.log.debug("right %d -> %d (straightPwm = %d)", percentage, pwmval, self.straightPwm);
@@ -118,7 +118,6 @@ class Drive:
             self.log.debug("holding max left")
             time.sleep(5)
 
-            # ramp up reverse to max
             for i in range(0, -100, -1*step):
                 self.right(i)
                 time.sleep(delay)
@@ -129,11 +128,9 @@ class Drive:
             self.log.debug("holding straight")
             time.sleep(5)
 
-
     def cleanup(self):
         self.pwm.write(self.motorChannel, 0, 0)
         self.pwm.write(self.steeringChannel, 0, 0)
-
 
 def destroy():
     drive.cleanup()
