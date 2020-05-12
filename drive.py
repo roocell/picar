@@ -45,6 +45,7 @@ class Drive:
     def __init__(self, name):
         self.name = name
         self.pwm = PCA9685.PWM() # I2C address 0x40
+        self.pwm.setup()
 
         """
         The internal reference clock is 25mhz (25000000.0) but may vary slightly
