@@ -45,10 +45,10 @@ socketio = SocketIO(app)
 #=============================================================
 # movement routes
 # these send % values to client.py via socketio
-def movement_cb(data):
+def movement_cb():
     #log.debug("movement_cb: " + data)
     pass
-def neautral_cb(data):
+def neutral_cb():
     #log.debug("neautral_cb: " + data)
     pass
 @app.route('/movement/')
@@ -61,7 +61,7 @@ def movement():
 @app.route('/neutral')
 def neutral():
     log.debug('in neutral')
-    socketio.emit('neutral', {'x': 0, 'y':0}, callback=neautral_cb)
+    socketio.emit('neutral', {'x': 0, 'y':0}, callback=neutral_cb)
     return "OK"
 
 #=============================================================
