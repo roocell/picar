@@ -87,6 +87,9 @@ class Drive:
         self.log.debug("straight")
         self.pwm.write(self.steeringChannel, 0, int(self.straightPwm))
 
+    def allstop(self):
+        self.neutral()
+        self.straight()
 
     # tested with LEDs first
     def testloop(self):

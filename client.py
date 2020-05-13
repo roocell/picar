@@ -163,7 +163,15 @@ def connect():
     global main_thread
     log.debug('connection established')
     log.debug('my sid is' + sio.sid)
-    main_thread = Thread(target=main_loop, args=(Camera(),))
+
+    # check if camera exists
+    if "video0" in os.listdir("/dev"):
+        camera = Camera()
+        main_thread = Thread(target=main_loop, args=(camera,))
+    else:
+        log.debug("creating main thread without camera")
+        main_thread = Thread(target=main_loop, args=(None,))
+
 
 @sio.event
 def connect_error():
@@ -175,7 +183,10 @@ def disconnect():
 def hb_response(data):
     global hb_time
     milliseconds = int(round((time.time()-hb_time) * 1000))
-    log.debug("server returned " + str(data) + " (rt=" + str(milliseconds) +"ms)")
+    #log.debug(time.time())
+    log_every_10secs = int(time.time()) % 10
+    if (log_every_10secs == 0):
+        log.debug("HB " + str(data) + " (rt=" + str(milliseconds) +"ms)")
 
 #==========================================================
 # MAIN LOOP
@@ -187,7 +198,8 @@ def main_loop(camera):
     last_loc_mod_time = 0
     log.debug("entering main loop")
     while sio.connected:
-        processCamera(camera)
+        if camera is not None:
+            processCamera(camera)
 
         # sending of the frame is interrupting any other messages
         # the only way i could figure out how to overcome this is
@@ -196,11 +208,16 @@ def main_loop(camera):
         # will have to set a global, then sent here
         # no idea how this is going to handle multiple cameras.... :(
         hb = int(round((time.time()-last_hb)))
-        if (sio.connected == True and hb >= 10):
+        if (sio.connected == True and hb >= 1):
             hb_time = time.time()
-            log.debug("ML: sending hb_from_client " + str(hb_time))
+            #log.debug("ML: sending hb_from_client " + str(hb_time))
             sio.emit("hb_from_client", {'hb_time' : str(hb_time)}, namespace='/heartbeat', callback=hb_response)
             last_hb = time.time()
+
+        # if we've missed 2 heartbeats in a row - go neutral
+        if (sio.connected == True and hb >= 2):
+            log.debug("NO HB! ALL STOP")
+            drive.allstop()
 
         if (os.path.exists(LOC_FILE)):
             modtime = os.path.getmtime(LOC_FILE)
@@ -216,7 +233,9 @@ def main_loop(camera):
 
 
     if (sio.connected == False):
-        log.debug("stopped sending frames")
+        log.debug("disconnected! allstop!")
+        drive.allstop()
+
 # end of main_loop
 
 #=======================================================
