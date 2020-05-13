@@ -148,17 +148,15 @@ body
 
 // Create JoyStick object into the DIV 'joy1Div'
 var joyparams1 = { "title": "joystick",
-          "movementCallback":function () {
-																		var joy1X = document.getElementById("joy1X");
-																		var joy1Y = document.getElementById("joy1Y");
-																		//console.log("movement x " + joy1X.value + " y " + joy1Y.value);
-						                         $.getJSON('/movement', {'x':joy1X.value, 'y':joy1Y.value},
+          "movementCallback":function (data) {
+																		console.log(data);
+						                         $.getJSON('/movement', data,
 																		   function(data) {
 																		      // server Response
 																			 });
 					                          },
-					 "neutralCallback":function () {
- 						                         $.getJSON('/neutral', { }, function(data) { });
+					 "neutralCallback":function (data) {
+ 						                         $.getJSON('/neutral', data, function(data) { });
  					                         },
 				};
 var Joy1 = new JoyStick('joy1Div', joyparams1);

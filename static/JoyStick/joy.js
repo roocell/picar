@@ -64,12 +64,7 @@ var JoyStick = (function(container, parameters) {
     vertical =  (undefined === parameters.vertical ? false : parameters.vertical),
     horizontal =  (undefined === parameters.horizontal ? false : parameters.horizontal),
     movementCallback =  (undefined === parameters.movementCallback ? nil : parameters.movementCallback),
-    upCallback =  (undefined === parameters.upCallback ? nil : parameters.upCallback),
-    downCallback =  (undefined === parameters.downCallback ? nil : parameters.downCallback),
-    leftCallback =  (undefined === parameters.leftCallback ? nil : parameters.leftCallback),
-    rightCallback =  (undefined === parameters.rightCallback ? nil : parameters.rightCallback),
     neutralCallback =  (undefined === parameters.neutralCallback ? nil : parameters.neutralCallback),
-    steeringOffCallback =  (undefined === parameters.steeringOffCallback ? nil : parameters.steeringOffCallback),
     nil;
 
 	// Create Canvas element and add it in the Container object
@@ -103,6 +98,11 @@ var JoyStick = (function(container, parameters) {
 	// Used to save current position of stick
 	var movedX=centerX;
 	var movedY=centerY;
+
+  // need to track where the mouse down event happens so the JoyStick
+  // doesn't jump on the first movement.
+  var startX = 0;
+  var startY = 0;
 
 
   // Check if the device support the touch or not
@@ -149,12 +149,17 @@ var JoyStick = (function(container, parameters) {
     }
 
 		context.beginPath();
+
+    movedX -= startX;
+    movedY -= startY;
+
 		if(movedX<internalRadius) movedX=maxMoveStick;
 		if((movedX+internalRadius)>canvas.width) movedX=canvas.width-(maxMoveStick);
 		if(movedY<internalRadius) movedY=maxMoveStick;
 		if((movedY+internalRadius)>canvas.height) movedY=canvas.height-(maxMoveStick);
 
-		context.arc(movedX, movedY, internalRadius, 0, circumference, false);
+
+  	context.arc(movedX, movedY, internalRadius, 0, circumference, false);
 		// create radial gradient
 		var grd = context.createRadialGradient(centerX, centerY, 5, centerX, centerY, 200);
 		// Light color
@@ -227,6 +232,10 @@ var JoyStick = (function(container, parameters) {
 	function onMouseDown(event)
 	{
 		pressed=1;
+
+    startX = event.pageX - centerX - canvas.offsetLeft;
+    startY = event.pageY - centerY - canvas.offsetTop;
+    //console.log(canvas.offsetLeft +"," + canvas.offsetTop + " " + event.pageX + " " + event.pageY + " " + startX + " " + startY + " " + centerX + " " + centerY);
 	}
 
   // throttled handler so movement doesn't trigger
@@ -244,12 +253,14 @@ var JoyStick = (function(container, parameters) {
   }
   const tHandler = throttled(200, movementCallback);
 
+  var oooTimer = nil;
 	function onMouseMove(event)
 	{
 		if(pressed==1)
 		{
-      var dx = Math.abs(movedX-event.pageX);
-      var dy = Math.abs(movedY-event.pageY);
+      if (oooTimer != nil) {
+       clearTimeout(oooTimer);
+      }
 
 			movedX=event.pageX;
 			movedY=event.pageY;
@@ -265,44 +276,38 @@ var JoyStick = (function(container, parameters) {
       // every mouse move indicates a change
       // we need to notify
       // values passed will be in HTML
-      if (movementCallback != nil) tHandler();
+      if (movementCallback != nil)
+      {
+        var x = (100*((movedX - centerX)/maxMoveStick)).toFixed();
+        if (x > 100) x = 100;
+        var y = (100*((movedY - centerY)/maxMoveStick)).toFixed();
+        if (y > 100) y = 100;
+        console.log("onMouseMove " + x);
+        tHandler({'t':Date.now(), 'x':x, 'y':y});
 
-      // TODO: this gets triggered on every move
-      // will trigger many events
-      if ( movedY > centerY && downCallback != nil) {
-        if (up == 0) {
-          downCallback();
-          up = 1; down = 0;
-        }
-      } else if ( movedY < centerY && upCallback != nil) {
-        if (down == 0) {
-          upCallback();
-          down = 1; up = 0;
-        }
-      } else if (movedY == centerY && neutralCallback != nil){
-        neutralCallback();
-        up = 0; down = 0;
+        // just in case there was an out of order packet at the end of movement
+        // send it again 1 second later just to be safe.
+        // any new movement will kill this timer
+        oooTimer = setTimeout(function() {
+          console.log("running oooTimer");
+          tHandler({'t':Date.now(), 'x':x, 'y':y});
+        }, 1000);
       }
-      if ( movedX > centerX && rightCallback != nil) {
-        if (right == 0) {
-          rightCallback();
-          right = 1; left = 0;
-        }
-      } else if ( movedX < centerX && leftCallback != nil) {
-        if (left == 0) {
-          leftCallback();
-          left = 1; right = 0;
-        }
-      } else if (movedX == centerX && steeringOffCallback != nil){
-        steeringOffCallback();
-        left = 0; right = 0;
-      }
+
 		}
 	}
 	function onMouseUp(event)
 	{
+    if (oooTimer != nil) {
+     clearTimeout(oooTimer);
+    }
+
 		pressed=0;
     up = down = left = right = 0;
+
+    startX = 0;
+    startY = 0;
+
 		// If required reset position store variable
 		if(autoReturnToCenter)
 		{
@@ -310,10 +315,13 @@ var JoyStick = (function(container, parameters) {
 			movedY=centerY;
 		}
     if (neutralCallback != nil){
-      neutralCallback();
-    }
-    if (steeringOffCallback != nil){
-      steeringOffCallback();
+      neutralCallback({'t':Date.now()});
+
+      oooTimer = setTimeout(function() {
+        console.log("running N oooTimer");
+        neutralCallback({'t':Date.now()});
+      }, 1000);
+
     }
 
 		// Delete canvas
@@ -326,7 +334,7 @@ var JoyStick = (function(container, parameters) {
 
   function onMouseOut(event)
   {
-    onMouseUp();
+    if (pressed == 1) onMouseUp();
   }
 	/******************************************************
 	 * Public methods
