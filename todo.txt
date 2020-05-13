@@ -8,11 +8,16 @@
 - streaming voice out / mic in
 - picamera 2-axis
 - touch control (joy.js)
-- preprogrammed route
-- test cellphone tether
 - pi to read car battery and report
-- computer vision
-- server to display message if it stops receiving frames from client
-
+- server to display message (on webpage) if it stops receiving frames from client
 - hardware switch on raspi to switch wifi from cellphone tether to roocell
+- joystick with cursor keys is broken
+- server restart query GPS location
+- heartbeat gone = client goes into emergency procedure - shuts down motors.
+- when server sends drive control. process callback and if missing - show error
+  * if neutral callback has error - continue to send neutral
+
+# future
+- preprogrammed route
+- computer vision
 - VR app to drive the car as well!

@@ -22,8 +22,7 @@
   </style>
 </head>
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
-<script type="text/javascript" src="/static/jquery.min.js"> </script>
-<script type="text/javascript" src="/static/NoSleep.js"> </script>
+<script type="text/javascript" src="{{ url_for('static', filename='jquery.min.js') }}"> </script>
 <script  type="text/javascript">
 
 // position isn't the right kind of object to be used by JSON.stringify
@@ -46,7 +45,7 @@ window.onload = function() {
   if (navigator.geolocation) {
 
     // send location back to server over the socket
-    var socket = io.connect('https://' + document.domain + ':' + location.port + '/updatelocation');
+    var socket = io.connect('/updatelocation');
 
     // callback for when server emits "location update"
     socket.on('location_updated', function(msg) {
@@ -60,13 +59,13 @@ window.onload = function() {
 
 
     var iphone_icon = {
-        url: "/static/iphone.png", // url  70x125
+        url: "{{ url_for('static', filename='iphone.png') }}", // url  70x125
         scaledSize: new google.maps.Size(35, 67), // scaled size
         origin: new google.maps.Point(0,0), // origin
         anchor: new google.maps.Point(0, 0) // anchor
       };
     var picar_icon = {
-        url: "/static/raspi.png", // url   400 x 512
+        url: "{{ url_for('static', filename='raspi.png') }}", // url   400 x 512
         scaledSize: new google.maps.Size(25, 32), // scaled size
         origin: new google.maps.Point(0,0), // origin
         anchor: new google.maps.Point(0, 0) // anchor
@@ -113,29 +112,8 @@ window.onload = function() {
 <body>
 
 <p id="location"></p>
-<input type="button" id="toggle" value="Wake Lock is disabled" />
 <div id="map"></div>
 
-<script>
-    // prevent iphone from going to sleep
-    var noSleep = new NoSleep();
-
-    var wakeLockEnabled = false;
-    var toggle = document.getElementById("toggle");
-    toggle.addEventListener('click', function() {
-      if (!wakeLockEnabled) {
-        noSleep.enable(); // keep the screen on!
-        wakeLockEnabled = true;
-        toggle.value = "Wake Lock is enabled";
-        document.body.style.backgroundColor = "green";
-      } else {
-        noSleep.disable(); // let the screen turn off.
-        wakeLockEnabled = false;
-        toggle.value = "Wake Lock is disabled";
-        document.body.style.backgroundColor = "";
-      }
-    }, false);
-  </script>
 
 
 <script src="https://maps.googleapis.com/maps/api/js?key={{key}}&callback=initMap" async defer></script>
