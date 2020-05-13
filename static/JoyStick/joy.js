@@ -280,16 +280,16 @@ var JoyStick = (function(container, parameters) {
       {
         var x = (100*((movedX - centerX)/maxMoveStick)).toFixed();
         if (x > 100) x = 100;
-        var y = (100*((movedY - centerY)/maxMoveStick)).toFixed();
+        var y = (100*((movedY - centerY)/maxMoveStick)*(-1)).toFixed();
         if (y > 100) y = 100;
-        console.log("onMouseMove " + x);
+        //console.log("onMouseMove " + x);
         tHandler({'t':Date.now(), 'x':x, 'y':y});
 
         // just in case there was an out of order packet at the end of movement
         // send it again 1 second later just to be safe.
         // any new movement will kill this timer
         oooTimer = setTimeout(function() {
-          console.log("running oooTimer");
+          //console.log("running oooTimer");
           tHandler({'t':Date.now(), 'x':x, 'y':y});
         }, 1000);
       }
@@ -318,7 +318,6 @@ var JoyStick = (function(container, parameters) {
       neutralCallback({'t':Date.now()});
 
       oooTimer = setTimeout(function() {
-        console.log("running N oooTimer");
         neutralCallback({'t':Date.now()});
       }, 1000);
 
