@@ -123,9 +123,6 @@ body
 		<div class="row">
 			<div class="columnLateral">
 				<div id="joy1Div" style="width:200px;height:200px;margin:50px"></div>
-				Posizione X:<input id="joy1PosizioneX" type="text" /><br />
-				Posizione Y:<input id="joy1PosizioneY" type="text" /><br />
-				Direzione:<input id="joy1Direzione" type="text" /><br />
 				X :<input id="joy1X" type="text" /><br />
 				Y :<input id="joy1Y" type="text" />
 			</div>
@@ -160,16 +157,9 @@ var joyparams1 = { "title": "joystick",
  					                         },
 				};
 var Joy1 = new JoyStick('joy1Div', joyparams1);
-
-var joy1IinputPosX = document.getElementById("joy1PosizioneX");
-var joy1InputPosY = document.getElementById("joy1PosizioneY");
-var joy1Direzione = document.getElementById("joy1Direzione");
 var joy1X = document.getElementById("joy1X");
 var joy1Y = document.getElementById("joy1Y");
 
-setInterval(function(){ joy1IinputPosX.value=Joy1.GetPosX(); }, 50);
-setInterval(function(){ joy1InputPosY.value=Joy1.GetPosY(); }, 50);
-setInterval(function(){ joy1Direzione.value=Joy1.GetDir(); }, 50);
 setInterval(function(){ joy1X.value=Joy1.GetX(); }, 50);
 setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 

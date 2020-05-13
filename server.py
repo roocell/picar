@@ -45,21 +45,32 @@ socketio = SocketIO(app)
 #=============================================================
 # movement routes
 # these send % values to client.py via socketio
-def movement_cb():
+def movement_cb(data):
     #log.debug("movement_cb: " + data)
     pass
-def neutral_cb():
+def neutral_cb(data):
     #log.debug("neautral_cb: " + data)
     pass
+timestamp = 0;
 @app.route('/movement/')
 def movement():
+    t = request.args.get('t')
+    if (int(t) < timestamp):
+        # dont want the car jerking back and forth
+        log.debug("OOO packet " + t + "<>" + str(timestamp))
+        return "NOK"
     x = request.args.get('x')
     y = request.args.get('y')
-    log.debug("movement x=" + str(x) + " y=" + str(y))
+    log.debug("movement  x=" + str(x) + " y=" + str(y) + " (t=" + t +")")
     socketio.emit('movement', {'x': x, 'y':y}, callback=movement_cb)
     return "OK"
 @app.route('/neutral')
 def neutral():
+    t = request.args.get('t')
+    if (int(t) < timestamp):
+        # dont want the car jerking back and forth
+        log.debug("N OOO packet " + t + "<>" + str(timestamp))
+        return "NOK"
     log.debug('in neutral')
     socketio.emit('neutral', {'x': 0, 'y':0}, callback=neutral_cb)
     return "OK"
@@ -137,9 +148,9 @@ def video_feed():
 # heartbeat
 @socketio.on("hb_from_client", namespace='/heartbeat')
 def hb_from_client(message):
-    print("======================================")
-    print("rx client HEARBEAT")
-    print(message)
+    #print("======================================")
+    #print("rx client HEARBEAT")
+    #print(message)
     return "OK"
 def m_hb_cb(data):
     print("m_hb_cb: " + data)
