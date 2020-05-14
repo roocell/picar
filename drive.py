@@ -28,7 +28,7 @@ class Drive:
     maxForwardPwm = int(pwmMax * maxForwardDutyCycle / 100)
     maxReverseDutyCycle = 10
     maxReversePwm = int(pwmMax * maxReverseDutyCycle / 100)
-    idleMotorDutyCycle = 15
+    idleMotorDutyCycle = 15.1
     idleMotorPwm = int(pwmMax * idleMotorDutyCycle / 100)
 
     maxLeftDutyCycle = 20
@@ -42,16 +42,14 @@ class Drive:
     lastSteeringPWM = straightPwm
     smoothTrigger = int(0.05 * maxForwardPwm) # 5% to trigger smoothing
     smoothStep = int(0.01 * maxForwardPwm) # 1% smoothly steps
-    smoothDelay = 0.00
+    smoothDelay = 0.01
 
     # init - just so our check to kill it works
     smoothMotorThread = Thread(target=None, args=(idleMotorPwm))
     smoothSteeringThread = Thread(target=None, args=(straightPwm))
 
-    readyToReverse = False
-
     # create logger
-    log = logging.getLogger('drive.py')
+    log = logging.getLogger(__file__)
     log.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
@@ -131,7 +129,6 @@ class Drive:
 
 
     def forward(self, percentage): # 0 .. 100
-        self.readyToReverse = False
         pwmval = self.idleMotorPwm + (self.maxForwardPwm - self.idleMotorPwm) * percentage / 100
         pwmval = int(pwmval)
         #self.log.debug("forward %d -> %d (idlepwm = %d)", percentage, pwmval, self.idleMotorPwm);
@@ -143,6 +140,10 @@ class Drive:
         self.smoothMotorThread = Thread(target=self.smoothMotor, args=(pwmval, lambda : self.stopMotorThread,))
         self.smoothMotorThread.start()
 
+    # in order for reverse to work, user has to go reverse one time
+    # and then neutral and then reverse again (just like the controller)
+    # the important part is to start this script before turning on the ESC
+    # if the ESC is flashing then it won't work properly
     def reverse(self, percentage): # 0 .. -100
         if (percentage > 0):
             self.log.error("reverse percentage must be negative" + str(percentage))
@@ -157,19 +158,10 @@ class Drive:
             self.smoothMotorThread.join()
 
         # stop is full reverse PWM
+        # TODO: not sure if we need to introduce this scary thing
         if (self.lastMotorPWM > self.idleMotorPwm):
             self.log.debug("hitting the brakes")
             #self.pwm.write(self.motorChannel, 0, self.maxReversePwm)
-            #readyToReverse = True
-            return
-
-        # before we can go reverse we have to git full reverse PWM
-        # for some time
-        if (self.readyToReverse == False):
-            self.log.debug("readyToReverse")
-            self.readyToReverse = True
-            #self.pwm.write(self.motorChannel, 0, self.maxReversePwm)
-            # let the user go neutral and reverse again (just like controller)
             return
 
         self.stopMotorThread = False
