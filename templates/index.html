@@ -176,41 +176,85 @@ setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 					if (e.keyCode == '38' || e.keyCode == '40') {
 					  // go back to neutral
 					  Joy1.setPosition(100,100) ;
-						$.getJSON('/neutral', { }, function(data) { });
+						$.getJSON('/neutral', {'t':Date.now()}, function(data) { });
 				  }
-					if (e.keyCode == '37' || e.keyCode == '39') {
-					  // go back to neutral
-					  Joy2.setPosition(100,100) ;
-						$.getJSON('/steeringOff', { }, function(data) { });
-				  }
+
+					// not going to neutral on left/right up
+					// so we can tap to adjust steering
+					// || e.keyCode == '37' || e.keyCode == '39'
 				}
 				function checkKey(e) {
-						e = e || window.event;
+					  e = e || window.event;
+
+					  var k_esc = 27;
+						var k_up  = 38;
+						var k_dn  = 40;
+						var k_left = 37;
+						var k_right = 39;
+
+						var keys = [
+						 k_esc,
+						 k_up, k_dn, k_left, k_right
+
+					 ];
+					 var i = 0;
+					 var k_valid = false;
+
+					 for (i=0; i<keys.length; i++)
+					 {
+						  if (keys[i] == e.keyCode)
+							{
+								k_valid = true;
+								break;
+							}
+					 }
+					 if (k_valid == false) return;
 
             // stop cursor key from scrolling window
 					  e.preventDefault();
 
-						if (e.keyCode == '38') {
-								// up arrow
-								//alert('move forward');
-								$.getJSON('/moveForward', { }, function(data) { });
+						var x = Number(Joy1.GetX());
+						var y = Number(Joy1.GetY());
 
+						switch (e.keyCode)
+						{
+							case k_up:
+								// forward reverse is a fixed speed
 								// move vertical joystick on screen
 								// TODO: gradually set position so it's animated
-								Joy1.setPosition(0,-200);
-						} else if (e.keyCode == '40') {
-								// down arrow
-								$.getJSON('/moveBackward', { }, function(data) { });
-								Joy1.setPosition(0,200);
-						} else if (e.keyCode == '37') {
-							 // left arrow
-								$.getJSON('/moveLeft', { }, function(data) { });
-								Joy2.setPosition(-200,0);
-						} else if (e.keyCode == '39') {
-								// right arrow
-								$.getJSON('/moveRight', { }, function(data) { });
-								Joy2.setPosition(200,0);
+								y = 38;
+								break;
+							case k_dn:
+								y = -38;
+								break;
+						  case k_left:
+								x = x - 10;
+								if (x < -100) x = -100;
+								break;
+							case k_right:
+								x = x + 10;
+								if (x > 100) x = 100;
+								break;
+							case k_esc:
+							  Joy1.setPosition(100, 100);
+							  $.getJSON('/neutral', {'x':x, 'y':y,'t':Date.now()}, function(data) { });
+								return;
+								break;
 						}
+
+						// only send if there is a change - otherwise it will generate a lot of
+						// events
+						var prevx = Joy1.GetX();
+						var prevy = Joy1.GetY();
+
+						console.log("prev " + prevx + " " + prevy + "new " + x + " " + y);
+
+						if (prevx != x || prevy != y)
+            {
+							$.getJSON('/movement', {'x':x, 'y':y,'t':Date.now()}, function(data) { });
+						}
+						// not sure why it's div 2 but it is
+						Joy1.setPosition(x/2+100, y/2*(-1)+100);
 				}
 		</script>
 
