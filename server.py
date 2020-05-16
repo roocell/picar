@@ -28,7 +28,7 @@ webcam_w = 320
 webcam_h = 240
 
 # create logger
-log = logging.getLogger('server.py')
+log = logging.getLogger(__file__)
 log.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -51,26 +51,33 @@ def movement_cb(data):
 def neutral_cb(data):
     #log.debug("neautral_cb: " + data)
     pass
+def clearreverse_cb(data):
+    #log.debug("clearreverse_cb: " + data)
+    pass
 timestamp = 0;
 @app.route('/movement/')
 def movement():
-    t = request.args.get('t')
-    if (int(t) < timestamp):
+    global timestamp
+    t = int(request.args.get('t'))
+    if (t < timestamp):
         # dont want the car jerking back and forth
-        log.debug("OOO packet " + t + "<>" + str(timestamp))
+        log.debug("OOO packet %d < %d", t, timestamp)
         return "NOK"
+    timestamp = t
     x = request.args.get('x')
     y = request.args.get('y')
-    log.debug("movement  x=" + str(x) + " y=" + str(y) + " (t=" + t +")")
+    log.debug("movement  x=%s y=%s t=%d", x, y, t)
     socketio.emit('movement', {'x': x, 'y':y}, callback=movement_cb)
     return "OK"
 @app.route('/neutral')
 def neutral():
-    t = request.args.get('t')
-    if (int(t) < timestamp):
+    global timestamp
+    t = int(request.args.get('t'))
+    if (t < timestamp):
         # dont want the car jerking back and forth
-        log.debug("N OOO packet " + t + "<>" + str(timestamp))
+        log.debug("OOO packet %d < %d", t, timestamp)
         return "NOK"
+    timestamp = t
     log.debug('in neutral')
     socketio.emit('neutral', {'x': 0, 'y':0}, callback=neutral_cb)
     return "OK"
