@@ -16,6 +16,7 @@
 - heartbeat gone = client goes into emergency procedure - shuts down motors.
 - when server sends drive control. process callback and if missing - show error
   * if neutral callback has error - continue to send neutral
+- display latency on webpage
 
 # future
 - preprogrammed route
