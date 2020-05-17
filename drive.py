@@ -133,7 +133,7 @@ class Drive:
         pwmval = int(pwmval)
         if (pwmval > self.maxForwardPwm):
             pwmval = self.maxForwardPwm
-        #self.log.debug("forward %d -> %d (idlepwm = %d)", percentage, pwmval, self.idleMotorPwm);
+        self.log.debug("forward %d -> %d (idlepwm = %d)", percentage, pwmval, self.idleMotorPwm);
         if (self.smoothMotorThread.is_alive()):
             self.log.debug("killing previous smoothMotorThread")
             self.stopMotorThread = True
@@ -152,9 +152,9 @@ class Drive:
             return "error"
         pwmval = self.idleMotorPwm + (self.idleMotorPwm - self.maxReversePwm) * percentage / 100
         pwmval = int(pwmval)
-        if (pwmval > self.maxReversePwm):
+        if (pwmval < self.maxReversePwm):
             pwmval = self.maxReversePwm
-        #self.log.debug("reverse %d -> %d (idlepwm = %d)", percentage, pwmval, self.idleMotorPwm);
+        self.log.debug("reverse %d -> %d (idlepwm = %d)", percentage, pwmval, self.idleMotorPwm);
 
         if (self.smoothMotorThread.is_alive()):
             self.log.debug("killing previous smoothMotorThread")
@@ -182,7 +182,7 @@ class Drive:
         pwmval = int(pwmval)
         if (pwmval > self.maxLeftPwm):
             pwmval = self.maxLeftPwm
-        #self.log.debug("left %d -> %d (straightPwm = %d)", percentage, pwmval, self.straightPwm);
+        self.log.debug("left %d -> %d (straightPwm = %d)", percentage, pwmval, self.straightPwm);
         if (self.smoothSteeringThread.is_alive()):
             self.log.debug("killing previous smoothSteeringThread")
             self.stopSteeringThread = True
@@ -196,9 +196,9 @@ class Drive:
             return "error"
         pwmval = self.straightPwm + (self.straightPwm - self.maxRightPwm) * percentage / 100
         pwmval = int(pwmval)
-        if (pwmval > self.maxRightPwm):
+        if (pwmval < self.maxRightPwm):
             pwmval = self.maxRightPwm
-        #self.log.debug("right %d -> %d (straightPwm = %d)", percentage, pwmval, self.straightPwm);
+        self.log.debug("right %d -> %d (straightPwm = %d)", percentage, pwmval, self.straightPwm);
         if (self.smoothSteeringThread.is_alive()):
             self.log.debug("killing previous smoothSteeringThread")
             self.stopSteeringThread = True

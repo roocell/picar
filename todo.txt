@@ -17,6 +17,7 @@
 - when server sends drive control. process callback and if missing - show error
   * if neutral callback has error - continue to send neutral
 - display latency on webpage
+- trim
 
 # future
 - preprogrammed route
