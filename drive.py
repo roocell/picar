@@ -50,9 +50,9 @@ class Drive:
 
     # create logger
     log = logging.getLogger(__file__)
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.ERROR)
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(logging.ERROR)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     log.addHandler(ch)
