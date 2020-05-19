@@ -119,6 +119,34 @@ def location_updated(message):
     socketio.emit('server_location_updated', loc, namespace='/serverupdatelocation', broadcast=True)
     return "OK"
 
+# serve up location page
+# phone can update car location directly (not relayed through client.py)
+@app.route('/location')
+def location():
+    return render_template('location.html', key = apikeys.google_map_api)
+@socketio.on('update_location', namespace='/updatelocation')
+def updatelocation(message):
+    log.debug("======================================")
+    log.debug("location received")
+    # TODO: json.loads doesnt' get all the decimal places.
+    data = json.loads(message['data'])
+    log.debug(data)
+    loc = {"latitude":data['latitude'], "longitude":data['longitude']}
+
+    # emit back to web client so it can update location on it's page
+    socketio.emit('location_updated', loc, namespace="/updatelocation")
+
+    # emit to web client
+    socketio.emit('server_location_updated', loc, namespace='/serverupdatelocation', broadcast=True)
+    return "OK"
+@socketio.on('connect', namespace='/updatelocation')
+def connect():
+    log.debug("location flask client connected")
+    return "OK"
+@socketio.on('disconnect', namespace='/updatelocation')
+def test_disconnect():
+    print('location flask client disconnected')
+
 #=============================================================
 # Video
 last_rx_frame_log = 0
@@ -164,11 +192,11 @@ def m_hb_cb(data):
 @socketio.on('connect', namespace='/heartbeat')
 def connet():
     print("======================================")
-    print("client connected")
+    print("hearbeat client connected")
     return "OK"
 @socketio.on('disconnect', namespace='/heartbeat')
 def test_disconnect():
-    print('Client disconnected')
+    print('hearbeat client disconnected')
 
 
 #=====================================================
@@ -178,4 +206,4 @@ if __name__ == '__main__':
 
     socketio.run(app, certfile='/etc/letsencrypt/live/roocell.com/fullchain.pem',
                     keyfile='/etc/letsencrypt/live/roocell.com/privkey.pem',
-                    debug=False, host='0.0.0.0')
+                    debug=False, host='0.0.0.0', use_reloader=False)
