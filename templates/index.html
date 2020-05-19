@@ -46,6 +46,8 @@ body
 	height: {{webcam_h}};
 }
 
+
+
 		</style>
 
 		<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
@@ -122,9 +124,14 @@ body
 
 		<div class="row">
 			<div class="columnLateral">
+				  trim :<input type="range" min="-20" max="20" value="0"  id="trim_slider"><input id="trim_output" type="text" size=5 /><br />
+					drive:<input type="range" min="1" max="100" value="38"  id="drive_slider"><input id="drive_output" type="text" size=5 /><br />
+					revrs:<input type="range" min="1" max="100" value="38"  id="reverse_slider"><input id="reverse_output" type="text" size=5 /><br />
+					boost:<input type="range" min="1" max="100" value="38"  id="boost_slider"><input id="boost_output" type="text" size=5 /><br />
+
 				<div id="joy1Div" style="width:200px;height:200px;margin:50px"></div>
-				X :<input id="joy1X" type="text" /><br />
-				Y :<input id="joy1Y" type="text" />
+				X:<input id="joy1X" type="text" /><br />
+				Y:<input id="joy1Y" type="text" />
 			</div>
 
 			<!-- location display -->
@@ -143,10 +150,38 @@ body
 
 		<script type="text/javascript">
 
+			var trim_slider = document.getElementById("trim_slider");
+			var drive_slider = document.getElementById("drive_slider");
+			var reverse_slider = document.getElementById("reverse_slider");
+			var boost_slider = document.getElementById("boost_slider");
+			var trim_output = document.getElementById("trim_output");
+			var drive_output = document.getElementById("drive_output");
+			var boost_output = document.getElementById("boost_output");
+			var reverse_output = document.getElementById("reverse_output");
+			trim_output.value = trim_slider.value;
+			drive_output.value = drive_slider.value;
+			boost_output.value = boost_slider.value;
+			reverse_output.value = reverse_slider.value;
+			trim_slider.oninput = function() {
+			  trim_output.value = this.value;
+			}
+			drive_slider.oninput = function() {
+			  drive_output.value = this.value;
+			}
+			reverse_slider.oninput = function() {
+			  reverse_output.value = this.value;
+			}
+			boost_slider.oninput = function() {
+			  boost_output.value = this.value;
+			}
+
 // Create JoyStick object into the DIV 'joy1Div'
 var joyparams1 = { "title": "joystick",
           "movementCallback":function (data) {
-																		console.log(data);
+																		 // adjust trim
+																		 data['x'] = Number(data['x']) + Number(trim_slider.value);
+
+																		 console.log(data);
 						                         $.getJSON('/movement', data,
 																		   function(data) {
 																		      // server Response
@@ -171,13 +206,46 @@ setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 				document.onkeydown = checkKey;
 				document.onkeyup = resetKey;
 
+				var k_esc = 27;
+				var k_up  = 38;
+				var k_dn  = 40;
+				var k_left = 37;
+				var k_right = 39;
+				var b_key = 66; //boost
+				var keys = [
+				 k_esc,
+				 k_up, k_dn, k_left, k_right,
+				 b_key
+			   ];
 
 				function resetKey(e) {
-					if (e.keyCode == '38' || e.keyCode == '40') {
-					  // go back to neutral
-					  Joy1.setPosition(100,100) ;
-						$.getJSON('/neutral', {'t':Date.now()}, function(data) { });
-				  }
+					switch (e.keyCode)
+					{
+						case k_up:
+						case k_dn:
+							// go back to neutral
+							Joy1.setPosition(100,100) ;
+							$.getJSON('/neutral', {'t':Date.now()}, function(data) { });
+							break;
+						case b_key:
+							// remove boost
+							var trim_slider = document.getElementById("trim_slider");
+							var drive_slider = document.getElementById("drive_slider");
+							var reverse_slider = document.getElementById("reverse_slider");
+							var x = Number(Joy1.GetX());
+							var y = Number(Joy1.GetY());
+							if (y > 0)
+							{
+								y = Number(drive_slider.value);
+							} else {
+								y = Number(reverse_slider.value)*(-1);
+							}
+ 						  var data = {'x':Number(x)+Number(trim_slider.value), 'y':y,'t':Date.now()};
+							console.log(data);
+							$.getJSON('/movement', data, function(data) { });
+							Joy1.setPosition(x/2+100, y/2*(-1)+100);
+							break;
+					}
 
 					// not going to neutral on left/right up
 					// so we can tap to adjust steering
@@ -186,17 +254,6 @@ setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 				function checkKey(e) {
 					  e = e || window.event;
 
-					  var k_esc = 27;
-						var k_up  = 38;
-						var k_dn  = 40;
-						var k_left = 37;
-						var k_right = 39;
-
-						var keys = [
-						 k_esc,
-						 k_up, k_dn, k_left, k_right
-
-					 ];
 					 var i = 0;
 					 var k_valid = false;
 
@@ -222,10 +279,18 @@ setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 								// forward reverse is a fixed speed
 								// move vertical joystick on screen
 								// TODO: gradually set position so it's animated
-								y = 38;
+								var drive_slider = document.getElementById("drive_slider");
+								y = Number(drive_slider.value);
+								break;
+							case b_key:
+							  var boost_slider = document.getElementById("boost_slider");
+								var direction = 1;
+								if (y < 0) direction = -1;
+								y = Number(boost_slider.value)*direction;
 								break;
 							case k_dn:
-								y = -38;
+								var reverse_slider = document.getElementById("reverse_slider");
+								y = Number(reverse_slider.value)*(-1);
 								break;
 						  case k_left:
 								x = x - 10;
@@ -237,7 +302,7 @@ setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 								break;
 							case k_esc:
 							  Joy1.setPosition(100, 100);
-							  $.getJSON('/neutral', {'x':x, 'y':y,'t':Date.now()}, function(data) { });
+							  $.getJSON('/neutral', {'x':0, 'y':0,'t':Date.now()}, function(data) { });
 								return;
 								break;
 						}
@@ -247,11 +312,14 @@ setInterval(function(){ joy1Y.value=Joy1.GetY(); }, 50);
 						var prevx = Joy1.GetX();
 						var prevy = Joy1.GetY();
 
-						console.log("prev " + prevx + " " + prevy + "new " + x + " " + y);
+						//console.log("prev " + prevx + " " + prevy + "new " + x + " " + y);
 
 						if (prevx != x || prevy != y)
             {
-							$.getJSON('/movement', {'x':x, 'y':y,'t':Date.now()}, function(data) { });
+							var trim_slider = document.getElementById("trim_slider");
+							var data = {'x':Number(x)+Number(trim_slider.value), 'y':y,'t':Date.now()};
+							console.log(data);
+							$.getJSON('/movement', data, function(data) { });
 						}
 						// not sure why it's div 2 but it is
 						Joy1.setPosition(x/2+100, y/2*(-1)+100);
