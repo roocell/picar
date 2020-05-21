@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+# to rerun
+#  sudo killall client.py; python3 client.py
+
+
 # change threads to eventlet
 #import eventlet
 #eventlet.monkey_patch(socket=False)
@@ -219,16 +223,17 @@ def main_loop(camera):
             log.debug("NO HB! ALL STOP")
             drive.allstop()
 
-        if (os.path.exists(LOC_FILE)):
-            modtime = os.path.getmtime(LOC_FILE)
-        else:
-            modtime = 0
-        if (modtime > last_loc_mod_time):
-            f = open(LOC_FILE, "r")
-            message = f.read()
-            log.debug("forwarding loc to server")
-            sio.emit('location_updated', message, namespace="/serverupdatelocation")
-            last_loc_mod_time = modtime
+# disable this for now - will update loc directly to server
+#         if (os.path.exists(LOC_FILE)):
+#             modtime = os.path.getmtime(LOC_FILE)
+#         else:
+#             modtime = 0
+#         if (modtime > last_loc_mod_time):
+#             f = open(LOC_FILE, "r")
+#             message = f.read()
+#             log.debug("forwarding loc to server")
+#             sio.emit('location_updated', message, namespace="/serverupdatelocation")
+#             last_loc_mod_time = modtime
 
 
 
