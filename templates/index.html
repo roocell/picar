@@ -120,14 +120,49 @@ body
 
 			} // window on load
 
+			// get microphone
+			// stream to server which will relay to picar
+			var audioStream;
+			const handleSuccess = function(stream) {
+				audioStream = stream;
+				const context = new AudioContext();
+				const source = context.createMediaStreamSource(stream);
+				const processor = context.createScriptProcessor(1024, 1, 1);
+				source.connect(processor);
+				processor.connect(context.destination);
+				processor.onaudioprocess = function(e) {
+				// Do something with the data, e.g. convert it to WAV
+				//console.log(e.inputBuffer);
+				$.getJSON('/webaudio', {'data':JSON.stringify(e.inputBuffer)}, function(data) { });
+				};
+			};
+			function toggleMic(button)
+			{
+				var str = button.innerHTML;
+				if (str.includes("red"))
+				{
+					button.innerHTML = "<i class=\"material-icons\" style=\"color:black\">mic</i>";
+					const tracks = audioStream.getTracks();
+				  tracks.forEach(function(track) {
+				    track.stop();
+				  });				} else {
+					// MIC is on
+					button.innerHTML = "<i class=\"material-icons\" style=\"color:red\">mic</i>";
+					navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+					    .then(handleSuccess);
+				}
+			}
+
 		</script>
 
 		<div class="row">
 			<div class="columnLateral">
 				  trim :<input type="range" min="-20" max="20" value="0"  id="trim_slider"><input id="trim_output" type="text" size=5 /><br />
 					drive:<input type="range" min="1" max="100" value="38"  id="drive_slider"><input id="drive_output" type="text" size=5 /><br />
-					revrs:<input type="range" min="1" max="100" value="38"  id="reverse_slider"><input id="reverse_output" type="text" size=5 /><br />
-					boost:<input type="range" min="1" max="100" value="38"  id="boost_slider"><input id="boost_output" type="text" size=5 /><br />
+					revrs:<input type="range" min="1" max="100" value="30"  id="reverse_slider"><input id="reverse_output" type="text" size=5 /><br />
+					boost:<input type="range" min="1" max="100" value="75"  id="boost_slider"><input id="boost_output" type="text" size=5 /><br />
+
+					<button id="micButton" style="font-size:24px" onClick="toggleMic(this);"><i class="material-icons" style="color:black">mic</i></button>
 
 				<div id="joy1Div" style="width:200px;height:200px;margin:50px"></div>
 				X:<input id="joy1X" type="text" /><br />

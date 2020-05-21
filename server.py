@@ -95,6 +95,7 @@ def index():
             <meta name="author" content="Michael Russell">
             <meta name="viewport" content="initial-scale=1.0">
             <link rel="shortcut icon" type="image/png" href="static/raspi.png">
+            <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
             </head><body> """
     bottom =  "</body></html>"
     return top + \
@@ -178,6 +179,19 @@ def video_feed():
     #"""Video streaming route. Put this in the src attribute of an img tag."""
     return Response(gen(relayCam),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+#==========================================================
+# Audio
+def webaudio_cb(data):
+    #log.debug("webaudio_cb: " + data)
+    pass
+@app.route('/webaudio')
+def webaudio():
+    #log.debug("rx webaudio")
+    # emit audio to picar
+    #socketio.emit('webaudio', data, callback=webaudio_cb)
+    return "OK"
+
 
 #===========================================================
 # heartbeat
