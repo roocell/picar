@@ -14,6 +14,7 @@ import apikeys
 import logging
 import snap
 from flask_socketio import SocketIO, emit
+import atexit
 
 # to overcome error
 # ValueError: Too many packets in payload
@@ -197,27 +198,30 @@ def webaudio():
 # heartbeat
 @socketio.on("hb_from_client", namespace='/heartbeat')
 def hb_from_client(message):
-    #print("======================================")
-    #print("rx client HEARBEAT")
-    #print(message)
+    #log.debug("======================================")
+    #log.debug("rx client HEARBEAT")
+    #log.debug(message)
     return "OK"
 def m_hb_cb(data):
-    print("m_hb_cb: " + data)
+    log.debug("m_hb_cb: " + data)
 @socketio.on('connect', namespace='/heartbeat')
 def connet():
-    print("======================================")
-    print("hearbeat client connected")
+    log.debug("======================================")
+    log.debug("hearbeat client connected")
     return "OK"
 @socketio.on('disconnect', namespace='/heartbeat')
 def test_disconnect():
-    print('hearbeat client disconnected')
+    log.debug('hearbeat client disconnected')
 
 
 #=====================================================
 # main
-if __name__ == '__main__':
-    print("starting socketio")
+def cleanup():
+    log.debug("cleaning up")
 
+if __name__ == '__main__':
+    atexit.register(cleanup)
+    log.debug("starting socketio")
     socketio.run(app, certfile='/etc/letsencrypt/live/roocell.com/fullchain.pem',
                     keyfile='/etc/letsencrypt/live/roocell.com/privkey.pem',
-                    debug=False, host='0.0.0.0', use_reloader=False)
+                    debug=True, host='0.0.0.0', use_reloader=False)
