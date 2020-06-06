@@ -107,7 +107,7 @@ def index():
            #render_template('snap.html', innerHTML=snap.innerHTML()) + \
 #=============================================================
 # location
-@socketio.on("location_updated", namespace='/serverupdatelocation')
+@socketio.on("location_updated", namespace='/webclient')
 def location_updated(message):
     log.debug("location_updated")
     mdict = eval(message)
@@ -118,7 +118,7 @@ def location_updated(message):
 
     # emit to web client
     # TODO: sending of video frames is causing issues on reception of anything
-    socketio.emit('server_location_updated', loc, namespace='/serverupdatelocation', broadcast=True)
+    socketio.emit('server_location_updated', loc, namespace='/webclient', broadcast=True)
     return "OK"
 
 # serve up location page
@@ -139,7 +139,7 @@ def updatelocation(message):
     socketio.emit('location_updated', loc, namespace="/updatelocation")
 
     # emit to web client
-    socketio.emit('server_location_updated', loc, namespace='/serverupdatelocation', broadcast=True)
+    socketio.emit('server_location_updated', loc, namespace='/webclient', broadcast=True)
     return "OK"
 @socketio.on('connect', namespace='/updatelocation')
 def connect():
@@ -200,7 +200,7 @@ def webaudio():
 def hb_from_client(message):
     #log.debug("======================================")
     #log.debug("rx client HEARBEAT")
-    #log.debug(message)
+    socketio.emit('hb_from_client', message, namespace='/webclient', broadcast=True)
     return "OK"
 def m_hb_cb(data):
     log.debug("m_hb_cb: " + data)
@@ -224,4 +224,4 @@ if __name__ == '__main__':
     log.debug("starting socketio")
     socketio.run(app, certfile='/etc/letsencrypt/live/roocell.com/fullchain.pem',
                     keyfile='/etc/letsencrypt/live/roocell.com/privkey.pem',
-                    debug=True, host='0.0.0.0', use_reloader=False)
+                    debug=False, host='0.0.0.0', use_reloader=False)
