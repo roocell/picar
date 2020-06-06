@@ -20,7 +20,7 @@ from threading import Thread
 
 
 class Drive:
-    motorChannel = 11
+    motorChannel = 15
     steeringChannel = 4
     pwmMax = 4096 # PCA9682 is 12 bits resolution
 

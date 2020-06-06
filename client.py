@@ -10,7 +10,7 @@
 #from eventlet.green import threading
 import threading
 from threading import Thread
-
+import ultrasonic
 
 # a python socketio client
 # https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited
@@ -18,7 +18,6 @@ import socketio
 import time, os, io, datetime, sys
 from importlib import import_module
 import logging
-import atexit
 
 # we want to run a flask app here as well to serve up the location page
 # this app will get the location from a cellphone and then emit that info
@@ -200,6 +199,9 @@ def main_loop(camera):
     global fps
     last_hb = 0
     last_loc_mod_time = 0
+
+    ultrasonic.setup()
+
     log.debug("entering main loop")
     while sio.connected:
         if camera is not None:
@@ -213,9 +215,17 @@ def main_loop(camera):
         # no idea how this is going to handle multiple cameras.... :(
         hb = int(round((time.time()-last_hb)))
         if (sio.connected == True and hb >= 1):
+
+            # do actions @ heartbeat frequency
+            distance = ultrasonic.getSonar()
+
             hb_time = time.time()
             #log.debug("ML: sending hb_from_client " + str(hb_time))
-            sio.emit("hb_from_client", {'hb_time' : str(hb_time)}, namespace='/heartbeat', callback=hb_response)
+            sio.emit("hb_from_client",
+                    {'hb_time' : str(hb_time),
+                     'distance' : str(distance)
+                    },
+                    namespace='/heartbeat', callback=hb_response)
             last_hb = time.time()
 
         # if we've missed 2 heartbeats in a row - go neutral
